@@ -1,0 +1,5 @@
+Project-Name: smarthome-dsl
+Source: src
+Language: smarthome::Plugin
+Language-Name: SmarthomeDsl
+Language-Extensions: smrt

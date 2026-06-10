@@ -9,7 +9,7 @@
  - Transitions
 
 ## Port
- - type (http/xml, http/json, i2c(pins), raw pin, mqtt...)
+ - type (http/xml, http/json, i2c(pins), raw pin, event enum, mqtt...)
  - schema (schema, i.e. number, string, lists, dictionary, etc...)
 
 ## Schema
