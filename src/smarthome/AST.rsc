@@ -6,7 +6,10 @@ data System(loc src=|unknown:///|)
 alias ComponentID = str;
 alias PortName = str;
 alias StateName = str;
-data PortID = portID(ComponentID component, PortName port);
+data PortID
+= portID(ComponentID component, PortName port)
+| external_http(str uri)
+;
 
 data Component
 = component(ComponentID id, list[Port] ports, FSM state_machine);
@@ -37,8 +40,8 @@ data Event
 ;
 
 data ChannelType
-= tcp_xml()
-| tcp_json()
+= http_xml()
+| http_json()
 ;
 
 data TYPE
