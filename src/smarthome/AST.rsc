@@ -8,14 +8,26 @@ alias PortName = str;
 alias StateName = str;
 data PortID
 = portID(ComponentID component, PortName port)
-| external_http(str uri)
+;
+data ExternalSourcePort
+= http(str uri)
+;
+data ExternalTargetPort
+= http_json(str uri)
+| http_xml(str uri)
+;
+data ChannelType
+= http_xml()
+| http_json()
 ;
 
 data Component
 = component(ComponentID id, list[Port] ports, FSM state_machine);
 
 data Connection
-= connection(PortID source, PortID target, TYPE dt, ChannelType ct);
+= internal_connection(PortID source, PortID target, TYPE dt, ChannelType ct)
+| external_source_connection(ExternalSourcePort source, PortID target, TYPE dt)
+| external_target_connection(PortID source, ExternalTargetPort target, TYPE dt);
 
 data Port
 = port(PortName name, TYPE dt);
@@ -37,11 +49,6 @@ data Transition
 data Event
 = anyMessageFromPort(PortName port)
 | specificMessageFromPort(VALUE d, PortName port)
-;
-
-data ChannelType
-= http_xml()
-| http_json()
 ;
 
 data TYPE
