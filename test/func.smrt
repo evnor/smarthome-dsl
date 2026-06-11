@@ -1,8 +1,9 @@
 {
-(a: int, b: int) =
-    let 
-        c = a*a
-    in 
-        c*b+a
-    end
+    (a: int, b: list[int]) {
+        let sum = 0;
+        while a > 0 do
+            sum = sum + b[a];
+        end
+        return sum;
+    }
 }

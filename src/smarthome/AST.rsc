@@ -53,18 +53,31 @@ data Event(loc src=|unknown:///|)
 
 data Option[&T](loc src=|unknown:///|) = some(&T inner) | none();
 
-// https://www.rascal-mpl.org/docs/Recipes/Languages/Func/AbstractSyntax/
-// want something more like https://www.rascal-mpl.org/docs/Recipes/Languages/Pico/Abstract/
+// https://www.rascal-mpl.org/docs/Recipes/Languages/Pico/Abstract/
 data Func(loc src=|unknown:///|)
-= func(list[tuple[Type, str]] params, Exp body, Type return_type);
+= func(list[tuple[Type, str]] params, list[Statement], Type return_type);
+
+data Decl(loc src=|unknown:///|) = decl(str varname, Type tp);
+
+data Statement(loc src=|unknown:///|)
+= declStat(str varname, Type tp)
+| assignStat(LValue lval, Exp rval)
+| ifElseStat(Exp cond, list[Statement] ifpart, list[Statement] elsepart)
+| whileStat(Exp cond, list[Statement] body)
+| \continue()
+| \break()
+| \return(Exp exp)
+;
+
+data LValue(loc src=|unknown:///|)
+= var(str varname)
+| index(LValue lhs, Exp idx)
+| field(LValue lhs, str field)
+;
 
 data Exp(loc src=|unknown:///|)
-= err(str msg)
-| let(list[Binding] bindings, Exp body)
-| cond(Exp cond, Exp then, Exp otherwise)
-| var(str name)
-| prim(Primitive val)
-// call(str name, list[Exp] args)
+= primCon(Primitive val)
+| lvalue(LValue lval)
 
 | mul(Exp lhs, Exp rhs)
 | div(Exp lhs, Exp rhs)
@@ -74,12 +87,7 @@ data Exp(loc src=|unknown:///|)
 | lt(Exp lhs, Exp rhs)
 | geq(Exp lhs, Exp rhs)
 | leq(Exp lhs, Exp rhs)
-
-| seq(Exp lhs, Exp rhs)
-| assign(Exp lhs, Exp rhs)
 ;
-
-data Binding(loc src=|unknown:///|) = binding(str var, Exp exp);
 
 data Primitive(loc src=|unknown:///|)
 = integer(int i)

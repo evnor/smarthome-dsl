@@ -1,6 +1,6 @@
 module smarthome::Syntax
 
-lexical Ident =  [a-zA-Z][a-zA-Z0-9]* !>> [a-zA-Z0-9];
+lexical Ident =  [a-zA-Z][a-zA-Z0-9]* !>> [a-zA-Z0-9] \ Reserved;
 
 lexical Natural = [0-9]+ !>> [0-9];
 lexical String = string: "\"" Char* "\"";
@@ -10,12 +10,32 @@ lexical LAYOUT = [\ \t\n\r];
 
 layout LAYOUTLIST = LAYOUT*  !>> [\ \t\n\r] ;
 
+keyword Reserved
+= "if"
+| "else"
+| "while"
+| "do"
+| "end"
+| "int"
+| "str"
+| "list"
+| "map"
+| "tuple"
+| "continue"
+| "break"
+;
+
 start syntax System
   = "{" Func "}";
 
 syntax Func
-= func: "(" {IdentWithType ","}* ")" "=" Exp
-| "(" {IdentWithType ","}* ")" "-\>" Type "=" Exp;
+= func: "(" {IdentWithType ","}* ")" FuncBody
+| "(" {IdentWithType ","}* ")" "-\>" Type "=" FuncBody;
+
+syntax FuncBody
+= "=" Exp // Desugar to { return exp; }
+| "{" Statement* "}"
+;
 
 syntax IdentWithType = Ident ":" Type | Ident;
 
@@ -37,14 +57,17 @@ syntax Primitive
 
 syntax MapKeyValuePair = Primitive "=" Primitive;
 
+syntax LValue
+= var: Ident
+| left index: LValue "[" Exp "]"
+| left field: LValue "." Ident
+;
+
 syntax Exp 
-= err: "error" "(" String ")"
-| let: "let" {Binding ","}* "in" Exp "end"
-| cond: "if" Exp "then" Exp "else" Exp "end"
-| bracket "(" Exp ")"
-| var: Ident
-| prim: Primitive
-| call: Ident "(" {Exp ","}* ")"
+= bracket "(" Exp ")"
+| primCon: Primitive
+| lvalue: LValue
+// | call: Ident "(" {Exp ","}* ")"
 > non-assoc (
     left mul: Exp "*" Exp 
   | non-assoc div: Exp "/" Exp
@@ -60,10 +83,17 @@ non-assoc (
   | non-assoc geq:  Exp "\>=" Exp
   | non-assoc leq:  Exp "\<=" Exp
 )
->
-right assign: Exp ":=" Exp
->
-right seq: Exp ";" Exp
 ;
 
-syntax Binding = binding: Ident "=" Exp;
+syntax Statement
+= declStat: "let" LValue lval ":" Type tp ";"
+| assignStat: LValue lval "=" Exp rval ";"
+| "let" LValue lval ":" Type tp "=" Exp rval ";" // decl+assign
+| "let" LValue lval "=" Exp rval ";" // decl+assign (inferred type)
+
+| ifElseStat: "if" Exp cond "then" Statement* ifpart "else" Statement* elsepart "end"
+| whileStat: "while" Exp cond "do" Statement* body "end"
+| \continue: "continue" ";"
+| \break: "break" ";"
+| \return: "return" Exp? ";"
+;
