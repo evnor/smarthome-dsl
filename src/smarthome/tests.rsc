@@ -4,7 +4,7 @@ import smarthome::Parser;
 import IO;
 
 test bool func_dot_smrt() {
-    parseFunc(|project://smarthome/test/func.f|);
+    parseSmrt(|project://smarthome-dsl/test/func.smrt|);
     return true;
 }
 

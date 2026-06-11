@@ -1,5 +1,8 @@
 {
 (a: int, b: int) =
-    let a2 = a*a in
-    a2*b+a
+    let 
+        c = a*a
+    in 
+        c*b+a
+    end
 }

@@ -6,60 +6,61 @@ data System(loc src=|unknown:///|)
 alias ComponentID = str;
 alias PortName = str;
 alias StateName = str;
-data PortID
+data PortID(loc src=|unknown:///|)
 = portID(ComponentID component, PortName port)
 ;
-data ExternalSourcePort
+data ExternalSourcePort(loc src=|unknown:///|)
 = http(str uri)
 ;  
-data ExternalTargetPort
+data ExternalTargetPort(loc src=|unknown:///|)
 = http_json(str uri)
 | http_xml(str uri)
 ;
-data ChannelType
+data ChannelType(loc src=|unknown:///|)
 = http_xml()
 | http_json()
 ;
 
-data Component
+data Component(loc src=|unknown:///|)
 = component(ComponentID id, list[Port] ports, FSM state_machine);
 
-data Connection
+data Connection(loc src=|unknown:///|)
 = internal_connection(PortID source, PortID target, Type dt, ChannelType ct)
 | external_source_connection(ExternalSourcePort source, PortID target, Type dt)
 | external_target_connection(PortID source, ExternalTargetPort target, Type dt);
 
-data Port
+data Port(loc src=|unknown:///|)
 = port(PortName name, Type dt);
 
-data FSM
+data FSM(loc src=|unknown:///|)
 = transition_list(list[Transition])
 ;
 
-data State
+data State(loc src=|unknown:///|)
 = state(StateName name, list[tuple[str, Type]] d)
 ;
 
 // condition should be like 'state => state.value == 0'
 // action should be like 'state, callback' => { callback(type, port, payload), return targetState data }
-data Transition
+data Transition(loc src=|unknown:///|)
 = transition(State sourceState, State targetState, Event event, Func condition, Func action)
 ;
 
-data Event
+data Event(loc src=|unknown:///|)
 = anyMessageFromPort(PortName port)
 | specificMessageFromPort(Primitive d, PortName port)
 ;
 
-data Option[&T] = some(&T inner) | none();
+data Option[&T](loc src=|unknown:///|) = some(&T inner) | none();
 
 // https://www.rascal-mpl.org/docs/Recipes/Languages/Func/AbstractSyntax/
-data Func
+// want something more like https://www.rascal-mpl.org/docs/Recipes/Languages/Pico/Abstract/
+data Func(loc src=|unknown:///|)
 = func(list[tuple[Type, str]] params, Exp body, Type return_type);
 
-data Exp
+data Exp(loc src=|unknown:///|)
 = err(str msg)
-| let(list[BINDING] bindings, Exp body)
+| let(list[Binding] bindings, Exp body)
 | cond(Exp cond, Exp then, Exp otherwise)
 | var(str name)
 | prim(Primitive val)
@@ -78,9 +79,9 @@ data Exp
 | assign(Exp lhs, Exp rhs)
 ;
 
-data BINDING = binding(str var, Exp exp);
+data Binding(loc src=|unknown:///|) = binding(str var, Exp exp);
 
-data Primitive
+data Primitive(loc src=|unknown:///|)
 = integer(int i)
 | string(str s)
 | \map(map[str, Primitive] obj)
@@ -88,7 +89,7 @@ data Primitive
 | \tuple(list[Primitive] tup)
 ;
 
-data Type
+data Type(loc src=|unknown:///|)
 = inferred_t()
 | integer_t()
 | string_t()
