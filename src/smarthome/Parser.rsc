@@ -2,14 +2,13 @@ module smarthome::Parser
 
 import ParseTree;
 import IO;
+
 import smarthome::Syntax;
 
-/*
- * We already provided the parser for the LaBouR language. The name of the function must be parseLaBouR.
- * This function receives as a parameter the path of the file to parse represented as a loc, and returns a parse tree
- * that represents the parsed program.
- */
+start[System] parseSystem(loc filePath) {
+  return parse(#start[System], readFile(filePath));
+}
 
-// start[BoulderingWall] parseLaBouR(loc filePath) {
-//   return parse(#start[BoulderingWall], readFile(filePath));
-// }
+Func parseFunc(loc filePath) {
+  return parse(#Func, readFile(filePath));
+}

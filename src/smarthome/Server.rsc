@@ -19,5 +19,5 @@ import smarthome::Syntax;
  * - https://www.rascal-mpl.org/docs/Packages/RascalLsp/API/demo/lang/pico/LanguageServer/#demo-lang-pico-LanguageServer-picoExecutionService
  */
 set[LanguageService] contributions() = {
-  parsing(parser(#start[System]), usesSpecialCaseHighlighting = true)
+  parsing(parser(#start[System]), usesSpecialCaseHighlighting = false)
 };
