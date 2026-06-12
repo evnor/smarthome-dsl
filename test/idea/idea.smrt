@@ -6,12 +6,12 @@
         port(TO_SIGNAL, SignalEvent),
       ],
       {
-        states: [Full(int total), Available(int total, int available)],
+        states: [Full(total: int), Available(total: int, available: int)],
         initial: Full(10),
         transition(
           Full -> Available,
-          (FROM_BARRIER, CarEvent.CAR_OUT)
-          action: state => {
+          (FROM_BARRIER, CarEvent.CAR_OUT),
+          action: state {
             send(TO_SIGNAL, SignalEvent.LED_GREEN, delay = 1000);
             Available(state.total, 1)
           }

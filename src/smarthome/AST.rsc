@@ -33,8 +33,8 @@ data Port(loc src=|unknown:///|)
 = port(PortName name, Type dt);
 
 data FSM(loc src=|unknown:///|)
-= transition_list(list[Transition])
-;
+= transition_list(list[Decl] params, Exp initial_state, list[Transition] transitions)
+; //Exp for initial_state?
 
 data State(loc src=|unknown:///|)
 = state(StateName name, list[tuple[str, Type]] d)

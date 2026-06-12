@@ -1,6 +1,6 @@
 module smarthome::Syntax
 
-lexical Ident =  [a-zA-Z][a-zA-Z0-9]* !>> [a-zA-Z0-9] \ Reserved;
+lexical Ident =  [a-zA-Z][a-zA-Z0-9_]* \ Reserved !>> [a-zA-Z0-9_];
 
 lexical Natural = [0-9]+ !>> [0-9];
 lexical String = string: "\"" Char* "\"";
@@ -26,7 +26,33 @@ keyword Reserved
 ;
 
 start syntax System
-  = "{" Func "}";
+  = "{" "components" ":" "[" {Component ","}* "]" "}";
+
+syntax Component = Ident ":" "{" "[" Port* "]" "," FSM "}";
+
+syntax Port = "port" "(" Ident "," Type ")" ",";
+
+syntax FSM = "{" States "," Initial "," ({Transition ","}+ ",")? "}";
+
+syntax States = "states" ":" "[" {StateDecl ","}* "]";
+
+syntax StateDecl = Ident "(" {IdentWithType ","}* ")";
+
+syntax Initial = "initial" ":" StateCon;
+
+syntax Transition = "transition" "("
+Ident "-\>" Ident ","
+OnEvent ","
+Condition?
+"action" ":" Func
+")";
+
+syntax Condition = "condition" ":" Func ",";
+
+syntax OnEvent
+= "(" Ident "," Exp ")"
+| Ident
+;
 
 syntax Func
 = func: "(" {IdentWithType ","}* ")" FuncBody
@@ -45,6 +71,7 @@ syntax Type =
 | \map_t: "map" "[" Type "," Type "]"
 | \list_t: "list" "[" Type "]"
 | \tuple_t: "tuple" "[" {Type ","}* "]"
+| \enum: Ident
 ;
 
 syntax Primitive
@@ -66,6 +93,7 @@ syntax LValue
 syntax Exp 
 = bracket "(" Exp ")"
 | primCon: Primitive
+| stateCon: StateCon
 | lvalue: LValue
 // | call: Ident "(" {Exp ","}* ")"
 > non-assoc (
@@ -84,6 +112,8 @@ non-assoc (
   | non-assoc leq:  Exp "\<=" Exp
 )
 ;
+
+syntax StateCon = Ident "(" {Exp ","}* ")";
 
 syntax Statement
 = declStat: "let" LValue lval ":" Type tp ";"
