@@ -1,14 +1,15 @@
 module smarthome::Syntax
 
-lexical Ident =  [a-zA-Z][a-zA-Z0-9_]* \ Reserved !>> [a-zA-Z0-9_];
+import lang::std::Layout;
+
+lexical IdentLexical =  [a-zA-Z][a-zA-Z0-9_]* !>> [a-zA-Z0-9_];
+syntax Ident = IdentLexical \ Reserved;
 
 lexical Natural = [0-9]+ !>> [0-9];
 lexical String = string: "\"" Char* "\"";
 lexical Char = "\\" ![] | ![\\];
 
-lexical LAYOUT = [\ \t\n\r];
-
-layout LAYOUTLIST = LAYOUT*  !>> [\ \t\n\r] ;
+extend  lang::std::Layout;
 
 keyword Reserved
 = "if"
@@ -26,7 +27,31 @@ keyword Reserved
 ;
 
 start syntax System
-  = "{" "components" ":" "[" {Component ","}* "]" "}";
+= "{"
+  "components" ":" "[" ({Component ","}+ ",")? "]" ","
+  "connections" ":" "[" ({Connection ","}+ ",")? "]" ","
+  ("types" ":" "[" ({EnumDef ","}+ ",")? "]")?
+"}";
+
+syntax EnumDef
+= "enum" Ident ("\<" Type "\>")? "{"
+  ({EnumValueDef ","}+ ",")?
+"}";
+
+syntax EnumValueDef = Ident | Ident "=" Exp;
+
+syntax Connection
+= "{" ConnectionSource "," ConnectionTarget "}"
+;
+
+syntax ConnectionSource
+= "source" "(" Ident "," Ident ")"
+| "source" "(" "http_json" "(" String ")" ")"
+;
+syntax ConnectionTarget
+= "target" "(" Ident "," Ident ")"
+| "target" "(" "http_json" "(" String ")" ")"
+;
 
 syntax Component = Ident ":" "{" "[" Port* "]" "," FSM "}";
 
@@ -34,7 +59,7 @@ syntax Port = "port" "(" Ident "," Type ")" ",";
 
 syntax FSM = "{" States "," Initial "," ({Transition ","}+ ",")? "}";
 
-syntax States = "states" ":" "[" {StateDecl ","}* "]";
+syntax States = "states" ":" "[" ({StateDecl ","}+ ",")? "]";
 
 syntax StateDecl = Ident "(" {IdentWithType ","}* ")";
 
@@ -55,15 +80,16 @@ syntax OnEvent
 ;
 
 syntax Func
-= func: "(" {IdentWithType ","}* ")" FuncBody
-| "(" {IdentWithType ","}* ")" "-\>" Type "=" FuncBody;
+= func: "(" {IdentOrIdentWithType ","}* ")" FuncBody
+| "(" {IdentOrIdentWithType ","}* ")" "-\>" Type "=" FuncBody;
 
 syntax FuncBody
 = "=" Exp // Desugar to { return exp; }
 | "{" Statement* "}"
 ;
 
-syntax IdentWithType = Ident ":" Type | Ident;
+syntax IdentWithType = Ident ":" Type;
+syntax IdentOrIdentWithType = Ident | IdentWithType;
 
 syntax Type =
 | integer_t: "int"
@@ -111,6 +137,7 @@ non-assoc (
   | non-assoc geq:  Exp "\>=" Exp
   | non-assoc leq:  Exp "\<=" Exp
 )
+> non-assoc eq: Exp "==" Exp
 ;
 
 syntax StateCon = Ident "(" {Exp ","}* ")";
@@ -126,4 +153,5 @@ syntax Statement
 | \continue: "continue" ";"
 | \break: "break" ";"
 | \return: "return" Exp? ";"
+> send: "send" "(" {Exp ","}* ")" ";"
 ;

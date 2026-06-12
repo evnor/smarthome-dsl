@@ -6,5 +6,5 @@ import IO;
 import smarthome::Syntax;
 
 start[System] parseSmrt(loc filePath) {
-  return parse(#start[System], readFile(filePath));
+  return parse(#start[System], readFile(filePath), allowAmbiguity=false);
 }

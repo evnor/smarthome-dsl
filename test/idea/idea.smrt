@@ -6,57 +6,60 @@
         port(TO_SIGNAL, SignalEvent),
       ],
       {
-        states: [Full(total: int), Available(total: int, available: int)],
+        states: [
+          Full(total: int), 
+          Available(total: int, available: int),
+        ],
         initial: Full(10),
         transition(
           Full -> Available,
           (FROM_BARRIER, CarEvent.CAR_OUT),
-          action: state {
-            send(TO_SIGNAL, SignalEvent.LED_GREEN, delay = 1000);
-            Available(state.total, 1)
+          action: (state) {
+            send(TO_SIGNAL, SignalEvent.LED_GREEN);
+            return Available(state.total, 1);
           }
         ),
         transition(
           Available -> Full,
-          (FROM_BARRIER, CarEvent.CAR_IN)
-          condition: state => state.available == 1,
-          action: state => {
+          (FROM_BARRIER, CarEvent.CAR_IN),
+          condition: (state) = state.available == 1,
+          action: (state) {
             send(TO_SIGNAL, SignalEvent.LED_RED);
-            Full(state.total)
+            return Full(state.total);
           }
         ),
         transition(
           Available -> Available,
-          (FROM_BARRIER, CarEvent.CAR_IN)
-          action: state => Available(state.total, state.available - 1)
+          (FROM_BARRIER, CarEvent.CAR_IN),
+          action: (state) = Available(state.total, state.available - 1)
         ),
         transition(
           Available -> Available,
-          (FROM_BARRIER, CarEvent.CAR_OUT)
-          action: state => Available(state.total, min(state.available + 1, state.total))
+          (FROM_BARRIER, CarEvent.CAR_OUT),
+          action: (state) = Available(state.total, min(state.available + 1, state.total))
         ),
       }
-    }
+    },
   ],
   connections: [
     {
-      source(ParkingController, TO_SIGNAL)
+      source(ParkingController, TO_SIGNAL),
       target(http_json("/signal"))
       // TODO specify ChannelType, TYPE
     },
     {
-      source(http_json("/barrier"))
+      source(http_json("/barrier")),
       target(ParkingController, FROM_BARRIER)
       // TODO specify ChannelType, TYPE
       // Do we specify ChannelType, or just try to accept anything?
     },
   ],
   types: [
-    CarEvent: enum{
+    enum CarEvent {
       CAR_IN = 0,
       CAR_OUT = 1,
     },
-    SignalEvent<int>: enum{
+    enum SignalEvent<int>{
       LED_RED,
       LED_GREEN,
     },
