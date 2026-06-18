@@ -9,13 +9,12 @@ alias StateName = str;
 data PortID(loc src=|unknown:///|)
 = portID(ComponentID component, PortName port)
 ;
-data ExternalSourcePort(loc src=|unknown:///|)
-= http(str uri)
-;  
-data ExternalTargetPort(loc src=|unknown:///|)
+data ExternalPort(loc src=|unknown:///|)
 = http_json(str uri)
 | http_xml(str uri)
 ;
+alias ExternalSourcePort = ExternalPort;
+alias ExternalTargetPort = ExternalPort;
 data ChannelType(loc src=|unknown:///|)
 = http_xml()
 | http_json()
@@ -25,9 +24,9 @@ data Component(loc src=|unknown:///|)
 = component(ComponentID id, list[Port] ports, FSM state_machine);
 
 data Connection(loc src=|unknown:///|)
-= internal_connection(PortID source, PortID target, Type dt, ChannelType ct)
-| external_source_connection(ExternalSourcePort source, PortID target, Type dt)
-| external_target_connection(PortID source, ExternalTargetPort target, Type dt);
+= internal_connection(PortID sourcePort, PortID targetPort)
+| external_source_connection(ExternalSourcePort externalSource, PortID targetPort)
+| external_target_connection(PortID sourcePort, ExternalTargetPort externalTarget);
 
 data Port(loc src=|unknown:///|)
 = port(PortName name, Type dt);
@@ -103,6 +102,7 @@ data Type(loc src=|unknown:///|)
 = inferred_t()
 | integer_t()
 | string_t()
+| named_t(str name)
 // | schema(map[str, Type] obj)
 | \map_t()
 | \list_t(Type arr_type)
