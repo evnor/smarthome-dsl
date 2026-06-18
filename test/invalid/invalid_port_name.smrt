@@ -1,0 +1,64 @@
+{
+  components: [
+    ParkingController: {
+      [
+        port(FROM_BARRIER, CarEvent),
+        port(TO_SIGNAL, SignalEvent),
+      ],
+      {
+        states: [
+          Full(total: int), 
+          Available(total: int, available: int),
+        ],
+        initial: Full(10),
+        transition(
+          Full -> Available,
+          (FROM_BARRIER, CarEvent.CAR_OUT),
+          action: (state) {
+            send(TO_SIGNAL, SignalEvent.LED_GREEN);
+            return Available(state.total, 1);
+          }
+        ),
+        transition(
+          Available -> Full,
+          (FROM_BARRIER, CarEvent.CAR_IN),
+          condition: (state) = state.available == 1,
+          action: (state) {
+            send(TO_SIGNAL, SignalEvent.LED_RED);
+            return Full(state.total);
+          }
+        ),
+        transition(
+          Available -> Available,
+          (FROM_BARRIER, CarEvent.CAR_IN),
+          action: (state) = Available(state.total, state.available - 1)
+        ),
+        transition(
+          Available -> Available,
+          (FROM_BARRIER, CarEvent.CAR_OUT),
+          action: (state) = Available(state.total, min(state.available + 1, state.total))
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(ParkingController, NOT_EXIST),
+      target(http_json("/signal"))
+    },
+    {
+      source(http_json("/barrier")),
+      target(ParkingController, FROM_BARRIER)
+    },
+  ],
+  types: [
+    enum CarEvent {
+      CAR_IN = 0,
+      CAR_OUT = 1,
+    },
+    enum SignalEvent<int>{
+      LED_RED,
+      LED_GREEN,
+    },
+  ]
+}
