@@ -1,4 +1,5 @@
 // checkSmrt(|project://smarthome-dsl/test/idea/idea.smrt|);
+// checkSmrt(|project://smarthome-dsl/test/idea/climate_controller.smrt|);
 module smarthome::Smrtcheck
 
 
@@ -152,6 +153,3 @@ list[CheckError] checkSmrt(loc file) {
   return check(buildSystem(file));
 }
 
-void checkIdeaFile() {
-  println(checkSmrt(|project://smarthome-dsl/test/idea/idea.smrt|));
-}
