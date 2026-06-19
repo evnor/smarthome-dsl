@@ -13,11 +13,21 @@ extend  lang::std::Layout;
 
 keyword Reserved
 = "if"
+| "then"
 | "else"
 | "while"
 | "do"
 | "end"
+| "let"
+| "return"
+| "send"
+| "true"
+| "false"
+| "and"
+| "or"
+| "not"
 | "int"
+| "bool"
 | "str"
 | "list"
 | "map"
@@ -93,6 +103,7 @@ syntax IdentOrIdentWithType = Ident | IdentWithType;
 
 syntax Type =
 | integer_t: "int"
+| boolean_t: "bool"
 | string_t: "str"
 | \map_t: "map" "[" Type "," Type "]"
 | \list_t: "list" "[" Type "]"
@@ -103,6 +114,8 @@ syntax Type =
 syntax Primitive
 = integer: Natural
 | string: String
+| boolean: "true"
+| boolean: "false"
 | \map: "{" {MapKeyValuePair ","}* "}"
 | \list: "[" Primitive* "]"
 | \tuple: "(" {Primitive ","}* ")"
@@ -122,6 +135,7 @@ syntax Exp
 | stateCon: StateCon
 | lvalue: LValue
 // | call: Ident "(" {Exp ","}* ")"
+> right not: "not" Exp
 > non-assoc (
     left mul: Exp "*" Exp 
   | non-assoc div: Exp "/" Exp
@@ -137,7 +151,12 @@ non-assoc (
   | non-assoc geq:  Exp "\>=" Exp
   | non-assoc leq:  Exp "\<=" Exp
 )
-> non-assoc eq: Exp "==" Exp
+> non-assoc (
+    non-assoc eq: Exp "==" Exp
+  | non-assoc neq: Exp "!=" Exp
+)
+> left and: Exp "and" Exp
+> left or: Exp "or" Exp
 ;
 
 syntax StateCon = Ident "(" {Exp ","}* ")";
