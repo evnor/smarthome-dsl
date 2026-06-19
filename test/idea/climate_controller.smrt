@@ -1,0 +1,78 @@
+{
+  components: [
+    ClimateController: {
+      [
+        port(FROM_TEMP_SENSOR, TemperatureEvent),
+        port(TO_AC, CoolingCommand),
+      ],
+      {
+        states: [
+          Idle(currentTemp: int, targetTemp: int, mode: ClimateMode, hysteresis: int),
+          Cooling(currentTemp: int, targetTemp: int, mode: ClimateMode, hysteresis: int),
+        ],
+        initial: Idle(30, 24, ClimateMode.AUTO, 2),
+        transition(
+          Idle -> Cooling,
+          (FROM_TEMP_SENSOR, TemperatureEvent.UPDATE),
+          condition: (state) = state.mode != ClimateMode.OFF and state.currentTemp > state.targetTemp + state.hysteresis,
+          action: (state) {
+            let nextTemp: int = state.currentTemp;
+            nextTemp = nextTemp - 1;
+
+            if state.mode == ClimateMode.COOL or nextTemp > state.targetTemp then
+              send(TO_AC, CoolingCommand.ON);
+            else
+              send(TO_AC, CoolingCommand.OFF);
+            end
+
+            return Cooling(nextTemp, state.targetTemp, state.mode, state.hysteresis);
+          }
+        ),
+        transition(
+          Cooling -> Idle,
+          (FROM_TEMP_SENSOR, TemperatureEvent.UPDATE),
+          condition: (state) = state.mode == ClimateMode.OFF or state.currentTemp <= state.targetTemp,
+          action: (state) {
+            send(TO_AC, CoolingCommand.OFF);
+            return Idle(state.currentTemp, state.targetTemp, state.mode, state.hysteresis);
+          }
+        ),
+        transition(
+          Cooling -> Cooling,
+          (FROM_TEMP_SENSOR, TemperatureEvent.UPDATE),
+          condition: (state) = state.mode != ClimateMode.OFF and state.currentTemp > state.targetTemp,
+          action: (state) {
+            let nextTemp: int = state.currentTemp;
+            nextTemp = nextTemp - 1;
+            send(TO_AC, CoolingCommand.ON);
+            return Cooling(nextTemp, state.targetTemp, state.mode, state.hysteresis);
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/temperature")),
+      target(ClimateController, FROM_TEMP_SENSOR)
+    },
+    {
+      source(ClimateController, TO_AC),
+      target(http_json("/ac"))
+    },
+  ],
+  types: [
+    enum TemperatureEvent {
+      UPDATE = 0,
+    },
+    enum CoolingCommand<int> {
+      ON = 1,
+      OFF = 0,
+    },
+    enum ClimateMode<int> {
+      OFF = 0,
+      AUTO = 1,
+      COOL = 2,
+    },
+  ]
+}
