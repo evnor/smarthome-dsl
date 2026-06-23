@@ -1,7 +1,7 @@
 module smarthome::AST
 
 data System(loc src=|unknown:///|)
-= system(list[Component] components, list[Connection] connections);
+= system(list[Component] components, list[Connection] connections, list[EnumDef] types);
 
 alias ComponentID = str;
 alias PortName = str;
@@ -10,29 +10,36 @@ data PortID(loc src=|unknown:///|)
 = portID(ComponentID component, PortName port)
 ;
 data ExternalPort(loc src=|unknown:///|)
-= http_json(str uri)
-| http_xml(str uri)
+= httpJson(str uri)
+| httpXml(str uri)
 ;
 alias ExternalSourcePort = ExternalPort;
 alias ExternalTargetPort = ExternalPort;
 data ChannelType(loc src=|unknown:///|)
-= http_xml()
-| http_json()
+= httpXml()
+| httpJson()
 ;
 
 data Component(loc src=|unknown:///|)
 = component(ComponentID id, list[Port] ports, FSM state_machine);
 
+data EnumDef(loc src=|unknown:///|)
+= enumDef(str name, Type baseType, list[EnumValueDef] values);
+
+data EnumValueDef(loc src=|unknown:///|)
+= enumValueDef(str name, Option[Exp] val);
+
 data Connection(loc src=|unknown:///|)
-= internal_connection(PortID sourcePort, PortID targetPort)
-| external_source_connection(ExternalSourcePort externalSource, PortID targetPort)
-| external_target_connection(PortID sourcePort, ExternalTargetPort externalTarget);
+= internalConnection(PortID sourcePort, PortID targetPort)
+| externalSourceConnection(ExternalSourcePort externalSource, PortID targetPort)
+| externalTargetConnection(PortID sourcePort, ExternalTargetPort externalTarget)
+;
 
 data Port(loc src=|unknown:///|)
 = port(PortName name, Type dt);
 
 data FSM(loc src=|unknown:///|)
-= transition_list(list[Decl] params, Exp initial_state, list[Transition] transitions)
+= transitionList(list[State] states, Exp initialState, list[Transition] transitions)
 ; //Exp for initial_state?
 
 data State(loc src=|unknown:///|)
@@ -47,25 +54,27 @@ data Transition(loc src=|unknown:///|)
 
 data Event(loc src=|unknown:///|)
 = anyMessageFromPort(PortName port)
-| specificMessageFromPort(Primitive d, PortName port)
+| specificMessageFromPort(Exp d, PortName port)
 ;
 
 data Option[&T](loc src=|unknown:///|) = some(&T inner) | none();
 
 // https://www.rascal-mpl.org/docs/Recipes/Languages/Pico/Abstract/
 data Func(loc src=|unknown:///|)
-= func(list[tuple[Type, str]] params, list[Statement], Type return_type);
+= func(list[tuple[Type, str]] params, list[Statement] body, Type returnType);
 
 data Decl(loc src=|unknown:///|) = decl(str varname, Type tp);
 
 data Statement(loc src=|unknown:///|)
 = declStat(str varname, Type tp)
+| declAssignStat(str varname, Type tp, Exp rval)
 | assignStat(LValue lval, Exp rval)
 | ifElseStat(Exp cond, list[Statement] ifpart, list[Statement] elsepart)
 | whileStat(Exp cond, list[Statement] body)
 | \continue()
 | \break()
 | \return(Exp exp)
+| send(list[Exp] params)
 ;
 
 data LValue(loc src=|unknown:///|)
@@ -104,13 +113,12 @@ data Primitive(loc src=|unknown:///|)
 ;
 
 data Type(loc src=|unknown:///|)
-= inferred_t()
-| integer_t()
-| boolean_t()
-| string_t()
-| named_t(str name)
-// | schema(map[str, Type] obj)
-| \map_t()
-| \list_t(Type arr_type)
-| \tuple_t(list[Type] tuple_types)
+= inferredT()
+| integerT()
+| booleanT()
+| stringT()
+| namedT(str name)
+| \mapT(Type keyType, Type valueType)
+| \listT(Type arrType)
+| \tupleT(list[Type] tupleTypes)
 ;
