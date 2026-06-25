@@ -126,7 +126,7 @@ Func cst2ast((Func) `(<{IdentOrIdentWithType ","}* params>) <FuncBody body>`) {
   return func([cst2astParam(p) | p <- params], cst2ast(body), inferredT());
 }
 
-Func cst2ast((Func) `(<{IdentOrIdentWithType ","}* params>) -\> <Type returnType> = <FuncBody body>`) {
+Func cst2ast((Func) `(<{IdentOrIdentWithType ","}* params>) -\> <Type returnType> <FuncBody body>`) {
   return func([cst2astParam(p) | p <- params], cst2ast(body), cst2ast(returnType));
 }
 
@@ -169,12 +169,12 @@ Statement cst2ast((Statement) `let <LValue lval> = <Exp rval>;`) {
 Statement cst2ast((Statement) `if <Exp cond> then <Statement* ifpart> else <Statement* elsepart> end`) {
   return ifElseStat(cst2ast(cond), [cst2ast(s) | s <- ifpart], [cst2ast(s) | s <- elsepart]);
 }
-Statement cst2ast(Statement tree: (Statement) `if <Exp cond> then <Statement* ifpart> end`) {
-  return ifElseStat(cst2ast(cond), [cst2ast(s) | s <- ifpart], [], src=tree.src);
+Statement cst2ast((Statement) `if <Exp cond> then <Statement* ifpart> end`) {
+  return ifElseStat(cst2ast(cond), [cst2ast(s) | s <- ifpart], []);
 }
 
-Statement cst2ast(Statement tree: (Statement) `while <Exp cond> do <Statement* body> end`) {
-  return whileStat(cst2ast(cond), [cst2ast(s) | s <- body], src=tree.src);
+Statement cst2ast((Statement) `while <Exp cond> do <Statement* body> end`) {
+  return whileStat(cst2ast(cond), [cst2ast(s) | s <- body]);
 }
 
 Statement cst2ast((Statement) `continue;`) = smarthome::AST::\continue();
@@ -223,7 +223,9 @@ Exp cst2ast((Exp) `<Exp lhs> \<= <Exp rhs>`) = smarthome::AST::leq(cst2ast(lhs),
 
 Exp cst2ast((Exp) `<Exp lhs> == <Exp rhs>`) = smarthome::AST::eq(cst2ast(lhs), cst2ast(rhs));
 
-Exp cst2ast(Exp tree: (Exp) `<Exp lhs> in <Exp rhs>`) = smarthome::AST::\in(cst2ast(lhs), cst2ast(rhs), src=tree.src);
+Exp cst2ast((Exp) `<Exp lhs> != <Exp rhs>`) = smarthome::AST::neq(cst2ast(lhs), cst2ast(rhs));
+
+Exp cst2ast((Exp) `<Exp lhs> in <Exp rhs>`) = smarthome::AST::\in(cst2ast(lhs), cst2ast(rhs));
 
 Exp cst2ast((Exp) `<Exp lhs> and <Exp rhs>`) = smarthome::AST::\and(cst2ast(lhs), cst2ast(rhs));
 
@@ -257,10 +259,11 @@ tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Primitive va
   return <primitiveKey(cst2ast(key)), cst2ast(val)>;
 }
 
-tuple[str, Primitive] cst2ast(MapKeyValuePair tree: (MapKeyValuePair) `<Primitive key> = <Ident enumname> "." <Ident valuename>`) {
-  return <primitiveKey(cst2ast(key)), \enum(cst2ast(enumname), cst2ast(valuename), src=tree.src)>;
+tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Ident enumname> "." <Ident valuename>`) {
+  return <primitiveKey(cst2ast(key)), \enum(cst2ast(enumname), cst2ast(valuename))>;
 }
 
+Type cst2ast((Type) `int`) = integerT();
 
 Type cst2ast((Type) `bool`) = booleanT();
 
