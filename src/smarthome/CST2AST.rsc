@@ -259,7 +259,7 @@ tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Primitive va
   return <primitiveKey(cst2ast(key)), cst2ast(val)>;
 }
 
-tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Ident enumname> "." <Ident valuename>`) {
+tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Ident enumname> . <Ident valuename>`) {
   return <primitiveKey(cst2ast(key)), \enum(cst2ast(enumname), cst2ast(valuename))>;
 }
 

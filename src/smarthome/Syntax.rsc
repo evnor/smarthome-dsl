@@ -92,7 +92,7 @@ syntax OnEvent
 
 syntax Func
 = func: "(" {IdentOrIdentWithType ","}* ")" FuncBody
-| "(" {IdentOrIdentWithType ","}* ")" "-\>" Type "=" FuncBody;
+| "(" {IdentOrIdentWithType ","}* ")" "-\>" Type FuncBody;
 
 syntax FuncBody
 = "=" Exp // Desugar to { return exp; }

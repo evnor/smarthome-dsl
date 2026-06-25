@@ -64,7 +64,10 @@
         states: [
           Idle(registry: map[str, SecurityLevel]),
         ],
-        initial: Idle({ }), // Idle({ "Alice" = SecurityLevel.STAFF }),
+        // Depending on which of these lines is commented there's an error 
+        // in CST2AST in Func cst2ast((Func) `(<{IdentOrIdentWithType ","}* params>) -\> <Type returnType> <FuncBody body>`)
+        initial: Idle({ }), 
+        // initial: Idle({ "Alice" = SecurityLevel.STAFF }),
         transition(
           Idle -> Idle,
           REGISTER,
