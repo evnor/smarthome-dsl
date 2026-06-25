@@ -24,7 +24,7 @@
               depth = depth - 1;
             end
             send(ANSWER, b);
-            return Idle();
+            return "ERROR";
           }
         ),
       }

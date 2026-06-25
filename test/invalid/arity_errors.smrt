@@ -13,7 +13,8 @@
         transition(
           Idle -> Idle,
           QUERY,
-          action: (state, depth) {
+          condition: (state, too_many) = true,
+          action: (state, depth, too_many) {
             let a = 1;
             let b: int = 1;
             let tmp: int;

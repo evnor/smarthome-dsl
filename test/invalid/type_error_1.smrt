@@ -15,7 +15,7 @@
           QUERY,
           action: (state, depth) {
             let a = 1;
-            let b: int = 1;
+            let b: str = 1;
             let tmp: int;
             while depth > 1 do
               tmp = a + b;
