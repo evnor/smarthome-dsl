@@ -1,7 +1,9 @@
 module smarthome::Generator
 
 import IO;
+import vis::Text;
 import List;
+import Map;
 
 import smarthome::AST;
 import smarthome::Parser;
@@ -14,7 +16,7 @@ public str generatePythonFile(loc input, loc output) {
   if (errors != []) {
     throw "Cannot generate Python for invalid Smarthome DSL program: <errors>";
   }
-
+  // println(prettyNode(sys));
   str code = generatePython(sys);
   writeFile(output, code);
   return code;
@@ -128,6 +130,9 @@ list[str] generatePorts(Component componentDef, list[Connection] connections) {
         str cls = portClass(componentId, portName);
         str pyType = typeName(tp);
         str targetUri = externalTargetUri(componentId, portName, connections);
+        list[tuple[str,str]] internalTargets = [<tgtComp, tgtPort> 
+          | internalConnection(portID(srcComp, srcPort), portID(tgtComp, tgtPort)) <- connections, 
+          srcPort == portName && srcComp == componentId];
 
         lines += [
           "class <cls>(Port[<pyType>]):",
@@ -147,17 +152,17 @@ list[str] generatePorts(Component componentDef, list[Connection] connections) {
             "            \"http://localhost:8081<targetUri>\",",
             "            data=self.to_json(),",
             "            headers={\"Content-Type\": \"application/json\"},",
-            "        )",
-            ""
+            "        )"
           ];
         }
         else {
-          lines += [
-            "    def send(self):",
-            "        global event_queue",
-            "        event_queue.append(self)",
-            ""
-          ];
+          lines += ["    def send(self):"];
+          if (internalTargets == []) {
+            lines += ["        ..."];
+          }
+        }
+        for (<comp, port> <- internalTargets) {
+          lines += ["        event_queue.append(<portClass(comp, port)>(self.data))"];
         }
       }
     }
@@ -190,10 +195,7 @@ list[str] generateStates(Component componentDef, list[Connection] connections) {
           "class <stateClass(componentId, stateName)>(State):"
         ];
 
-        if (fields == []) {
-          lines += ["    pass"];
-        }
-        else {
+        if (fields != []) {
           for (<fieldName, tp> <- fields) {
             lines += ["    <fieldName>: <typeName(tp)>"];
           }
@@ -252,7 +254,7 @@ list[str] generateRuntime(list[Component] components, list[Connection] connectio
     "cur_state: dict[str, State] = {"
   ];
   bool first = true;
-  for (component(id, componentPorts, transitionList(_, componentInitialState, _)) <- components) {
+  for (component(id, _, transitionList(_, componentInitialState, _)) <- components) {
     if (!first) {
       lines[size(lines)-1] += ",";
     }
@@ -266,7 +268,8 @@ list[str] generateRuntime(list[Component] components, list[Connection] connectio
     "    event_queue.append(event)",
     "    while len(event_queue) \> 0:",
     "        event = event_queue.pop(0)",
-    "        cur_state[event.component] = cur_state[event.component].step(event)",
+    "        for component, state in cur_state.items():",
+    "            cur_state[component] = state.step(event)",
     "",
     "",
     "class Server(BaseHTTPRequestHandler):",
@@ -274,7 +277,7 @@ list[str] generateRuntime(list[Component] components, list[Connection] connectio
   ];
 
   first = true;
-  for (component(componentId, ports, transitionList(_, initialState, _)) <- components) {
+  for (component(componentId, ports, _) <- components) {
     list[Connection] incoming = incomingConnections(componentId, connections);
     for (Connection c <- incoming) {
       switch (c) {
@@ -483,7 +486,9 @@ str generatePrimitive(Primitive primitive) {
     case \tuple(values):
       return "(<generatePrimitiveList(values)>)";
     case \map(values):
-      return "{}";
+      return "{<generatePrimitiveMap(values)>}";
+    case \enum(enumName,fieldName):
+      return "(<enumName>.<fieldName>)";
   }
 
   return "None";
@@ -594,6 +599,14 @@ str generatePrimitiveList(list[Primitive] values) {
   list[str] generated = [];
   for (Primitive p <- values) {
     generated += [generatePrimitive(p)];
+  }
+  return joinComma(generated);
+}
+
+str generatePrimitiveMap(map[str, Primitive] values) {
+  list[str] generated = [];
+  for (<key, val> <- toList(values)) {
+    generated += ["\"<key>\":<generatePrimitive(val)>"];
   }
   return joinComma(generated);
 }
