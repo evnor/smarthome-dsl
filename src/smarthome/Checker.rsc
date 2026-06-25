@@ -82,6 +82,8 @@ list[CheckError] check(System sys) {
   errors += checkDuplicates(sys);
   errors += checkTypeDefinitions(sys, types);
 
+  rewriteEnumCon(sys, types);
+
   for (component(id, componentPorts, fsm) <- sys.components) {
     for (port(_, tp) <- componentPorts) {
       errors += checkType(tp, types);
@@ -140,6 +142,22 @@ list[CheckError] checkDuplicates(System sys) {
   }
 
   return errors;
+}
+
+void rewriteEnumCon(System sys, TypeTable types) {
+  bottom-up visit (sys) {
+    case lvalue(field(var(varname), fieldname)): {
+      if (varname in types) {
+        EnumDef enumdef = types[varname];
+        for (enumValueDef(name, _) <- enumdef.values) {
+          if (name == fieldname) {
+            // println("Rewriting <varname>.<fieldname> as enum");
+            insert primCon(\enum(varname, fieldname));
+          }
+        }
+      }
+    }
+  };
 }
 
 list[CheckError] checkTypeDefinitions(System sys, TypeTable types) {
@@ -582,6 +600,9 @@ tuple[Type, list[CheckError]] inferPrimitive(Primitive primitive) {
         }
       }
       return <\mapT(stringT(), valueType), errors>;
+    }
+    case \enum(enumName, _): {
+      return <\namedT(enumName), []>;
     }
   }
 

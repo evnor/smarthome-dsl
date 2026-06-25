@@ -254,7 +254,10 @@ tuple[str, Primitive] cst2ast((MapKeyValuePair) `<Primitive key> = <Primitive va
   return <primitiveKey(cst2ast(key)), cst2ast(val)>;
 }
 
-Type cst2ast((Type) `int`) = integerT();
+tuple[str, Primitive] cst2ast(MapKeyValuePair tree: (MapKeyValuePair) `<Primitive key> = <Ident enumname> "." <Ident valuename>`) {
+  return <primitiveKey(cst2ast(key)), \enum(cst2ast(enumname), cst2ast(valuename), src=tree.src)>;
+}
+
 
 Type cst2ast((Type) `bool`) = booleanT();
 

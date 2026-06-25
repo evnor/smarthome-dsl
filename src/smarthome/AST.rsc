@@ -111,6 +111,7 @@ data Primitive(loc src=|unknown:///|)
 | \map(map[str, Primitive] obj)
 | \list(list[Primitive] arr)
 | \tuple(list[Primitive] tup)
+| \enum(str enum_name, str enum_value_name)
 ;
 
 data Type(loc src=|unknown:///|)

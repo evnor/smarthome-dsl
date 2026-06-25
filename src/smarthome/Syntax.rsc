@@ -121,7 +121,9 @@ syntax Primitive
 | \tuple: "(" {Primitive ","}* ")"
 ;
 
-syntax MapKeyValuePair = Primitive "=" Primitive;
+syntax MapKeyValuePair
+= Primitive "=" Primitive
+> Primitive "=" Ident "." Ident;
 
 syntax LValue
 = var: Ident
@@ -133,7 +135,7 @@ syntax Exp
 = bracket "(" Exp ")"
 | primCon: Primitive
 | stateCon: StateCon
-| lvalue: LValue
+| lvalue: LValue // When constructing an enum, it is initially parsed as LValue
 // | call: Ident "(" {Exp ","}* ")"
 > right not: "not" Exp
 > non-assoc (
