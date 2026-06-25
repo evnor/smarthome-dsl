@@ -20,12 +20,14 @@ class SignalEvent(IntEnum):
 
 T = TypeVar("T")
 class Port(Generic[T], ABC):
+    component: str
     name: str
     data: T
     @abstractmethod
     def send(self): ...
 
 class ParkingControllerFROM_BARRIER(Port[CarEvent]):
+    component = "ParkingController"
     name = "FROM_BARRIER"
     data: CarEvent
     def __init__(self, data: CarEvent):
@@ -34,6 +36,7 @@ class ParkingControllerFROM_BARRIER(Port[CarEvent]):
         ...
 
 class ParkingControllerTO_SIGNAL(Port[SignalEvent]):
+    component = "ParkingController"
     name = "TO_SIGNAL"
     data: SignalEvent
     def __init__(self, data: SignalEvent):
@@ -86,13 +89,19 @@ class StateAvailable(State):
         return self
 
 
-cur_state: State = StateFull(10)
+event_queue: list[Port] = []
+cur_state: dict[str, State] = {
+    "ParkingController": StateFull(10),
+}
 def handle_event(event: Port):
     global cur_state
-    cur_state = cur_state.step(event)
+    event_queue.append(event)
+    while len(event_queue) > 0:
+        event = event_queue.pop(0)
+        cur_state[event.component] = cur_state[event.component].step(event)
 
 
-class ParkingController(BaseHTTPRequestHandler):
+class Server(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == "/barrier":
             content_length = int(self.headers.get("Content-Length", 0))
@@ -125,7 +134,7 @@ class ParkingController(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    webServer = HTTPServer((hostName, serverPort), ParkingController)
+    webServer = HTTPServer((hostName, serverPort), Server)
     print("Server started http://%s:%s" % (hostName, serverPort))
 
     try:

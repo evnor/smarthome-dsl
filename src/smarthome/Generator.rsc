@@ -43,6 +43,7 @@ public str generatePython(System sys) {
     "",
     "T = TypeVar(\"T\")",
     "class Port(Generic[T], ABC):",
+    "    component: str",
     "    name: str",
     "    data: T",
     "    @abstractmethod",
@@ -66,10 +67,7 @@ public str generatePython(System sys) {
     lines += generateStates(c, sys.connections);
   }
 
-  if (sys.components != []) {
-    Component first = sys.components[0];
-    lines += generateRuntime(first, sys.connections);
-  }
+  lines += generateRuntime(sys.components, sys.connections);
 
   return joinLines(lines);
 }
@@ -133,6 +131,7 @@ list[str] generatePorts(Component componentDef, list[Connection] connections) {
 
         lines += [
           "class <cls>(Port[<pyType>]):",
+          "    component = \"<componentId>\"",
           "    name = \"<portName>\"",
           "    data: <pyType>",
           "    def __init__(self, data: <pyType>):",
@@ -155,7 +154,8 @@ list[str] generatePorts(Component componentDef, list[Connection] connections) {
         else {
           lines += [
             "    def send(self):",
-            "        ...",
+            "        global event_queue",
+            "        event_queue.append(self)",
             ""
           ];
         }
@@ -187,7 +187,7 @@ list[str] generateStates(Component componentDef, list[Connection] connections) {
       case state(stateName, fields): {
         lines += [
           "@dataclass",
-          "class State<stateName>(State):"
+          "class <stateClass(componentId, stateName)>(State):"
         ];
 
         if (fields == []) {
@@ -224,7 +224,7 @@ list[str] generateStates(Component componentDef, list[Connection] connections) {
 
 list[str] generateTransition(str componentId, list[Port] ports, Event event, Func condition, Func action) {
   str eventCheck = eventPredicate(componentId, event);
-  str conditionCheck = conditionPredicate(condition);
+  str conditionCheck = conditionPredicate(componentId, condition);
   list[Statement] actionBody = [];
   list[tuple[Type, str]] actionParams = [];
   switch (action) {
@@ -246,38 +246,36 @@ list[str] generateTransition(str componentId, list[Port] ports, Event event, Fun
   return lines;
 }
 
-list[str] generateRuntime(Component componentDef, list[Connection] connections) {
-  str componentId = "";
-  list[Port] ports = [];
-  Exp initialState = primCon(\tuple([]));
-  switch (componentDef) {
-    case component(id, componentPorts, transitionList(_, componentInitialState, _)): {
-      componentId = id;
-      ports = componentPorts;
-      initialState = componentInitialState;
-    }
-  }
-
+list[str] generateRuntime(list[Component] components, list[Connection] connections) {
   list[str] lines = [
-    "cur_state: State = <generateExp(initialState)>",
+    "event_queue: list[Port] = []",
+    "cur_state: dict[str, State] = {"
+  ];
+  bool first = true;
+  for (component(id, componentPorts, transitionList(_, componentInitialState, _)) <- components) {
+    if (!first) {
+      lines[size(lines)-1] += ",";
+    }
+    lines += ["    \"<id>\": <generateExp(id, componentInitialState)>"];
+    first = false;
+  }
+  lines += [
+    "}",
     "def handle_event(event: Port):",
     "    global cur_state",
-    "    cur_state = cur_state.step(event)",
+    "    event_queue.append(event)",
+    "    while len(event_queue) \> 0:",
+    "        event = event_queue.pop(0)",
+    "        cur_state[event.component] = cur_state[event.component].step(event)",
     "",
     "",
-    "class <componentId>(BaseHTTPRequestHandler):",
+    "class Server(BaseHTTPRequestHandler):",
     "    def do_POST(self):"
   ];
 
-  list[Connection] incoming = incomingConnections(componentId, connections);
-  if (incoming == []) {
-    lines += [
-      "        self.send_response(404)",
-      "        self.end_headers()"
-    ];
-  }
-  else {
-    bool first = true;
+  first = true;
+  for (component(componentId, ports, transitionList(_, initialState, _)) <- components) {
+    list[Connection] incoming = incomingConnections(componentId, connections);
     for (Connection c <- incoming) {
       switch (c) {
         case externalSourceConnection(httpJson(uri), portID(_, portName)): {
@@ -330,18 +328,20 @@ list[str] generateRuntime(Component componentDef, list[Connection] connections) 
         }
       }
     }
-    lines += [
-      "        else:",
-      "            self.send_response(404)",
-      "            self.end_headers()"
-    ];
   }
+  if (!first) {
+    lines += "        else:";
+  }
+  lines += [
+    "            self.send_response(404)",
+    "            self.end_headers()"
+  ];
 
   lines += [
     "",
     "",
     "if __name__ == \"__main__\":",
-    "    webServer = HTTPServer((hostName, serverPort), <componentId>)",
+    "    webServer = HTTPServer((hostName, serverPort), Server)",
     "    print(\"Server started http://%s:%s\" % (hostName, serverPort))",
     "    try:",
     "        webServer.serve_forever()",
@@ -362,17 +362,17 @@ list[str] generateStatements(str componentId, list[Statement] statements) {
       case declStat(name, _):
         lines += ["<name> = None"];
       case declAssignStat(name, _, rval):
-        lines += ["<name> = <generateExp(rval)>"];
+        lines += ["<name> = <generateExp(componentId, rval)>"];
       case assignStat(lval, rval):
-        lines += ["<generateLValue(lval)> = <generateExp(rval)>"];
+        lines += ["<generateLValue(componentId, lval)> = <generateExp(componentId, rval)>"];
       case ifElseStat(cond, ifpart, elsepart): {
-        lines += ["if <generateExp(cond)>:"];
+        lines += ["if <generateExp(componentId, cond)>:"];
         lines += indent(generateStatements(componentId, ifpart), 4);
         lines += ["else:"];
         lines += indent(generateStatements(componentId, elsepart), 4);
       }
       case whileStat(cond, body): {
-        lines += ["while <generateExp(cond)>:"];
+        lines += ["while <generateExp(componentId, cond)>:"];
         lines += indent(generateStatements(componentId, body), 4);
       }
       case \continue():
@@ -380,12 +380,12 @@ list[str] generateStatements(str componentId, list[Statement] statements) {
       case \break():
         lines += ["break"];
       case \return(exp):
-        lines += ["return <generateExp(exp)>"];
+        lines += ["return <generateExp(componentId, exp)>"];
       case send(params): {
         if (size(params) == 2) {
           switch (params[0]) {
             case lvalue(var(portName)):
-              lines += ["<portClass(componentId, portName)>(<generateExp(params[1])>).send()"];
+              lines += ["<portClass(componentId, portName)>(<generateExp(componentId, params[1])>).send()"];
             default:
               lines += ["# unsupported send target"];
           }
@@ -401,53 +401,53 @@ list[str] generateStatements(str componentId, list[Statement] statements) {
   return lines;
 }
 
-str generateExp(Exp exp) {
+str generateExp(str componentId, Exp exp) {
   switch (exp) {
     case primCon(p):
       return generatePrimitive(p);
     case lvalue(lval):
-      return generateLValue(lval);
+      return generateLValue(componentId, lval);
     case call(name, params): {
-      str args = generateExpList(params);
+      str args = generateExpList(componentId, params);
       if (name == "min" || name == "max") {
         return "<name>(<args>)";
       }
-      return "<stateClass(name)>(<args>)";
+      return "<stateClass(componentId, name)>(<args>)";
     }
     case mul(lhs, rhs):
-      return "(<generateExp(lhs)> * <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> * <generateExp(componentId, rhs)>)";
     case div(lhs, rhs):
-      return "(<generateExp(lhs)> / <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> / <generateExp(componentId, rhs)>)";
     case add(lhs, rhs):
-      return "(<generateExp(lhs)> + <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> + <generateExp(componentId, rhs)>)";
     case sub(lhs, rhs):
-      return "(<generateExp(lhs)> - <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> - <generateExp(componentId, rhs)>)";
     case gt(lhs, rhs):
-      return "(<generateExp(lhs)> \> <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> \> <generateExp(componentId, rhs)>)";
     case lt(lhs, rhs):
-      return "(<generateExp(lhs)> \< <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> \< <generateExp(componentId, rhs)>)";
     case eq(lhs, rhs):
-      return "(<generateExp(lhs)> == <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> == <generateExp(componentId, rhs)>)";
     case neq(lhs, rhs):
-      return "(<generateExp(lhs)> != <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> != <generateExp(componentId, rhs)>)";
     case geq(lhs, rhs):
-      return "(<generateExp(lhs)> \>= <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> \>= <generateExp(componentId, rhs)>)";
     case leq(lhs, rhs):
-      return "(<generateExp(lhs)> \<= <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> \<= <generateExp(componentId, rhs)>)";
     case \in(lhs, rhs):
-      return "(<generateExp(lhs)> in <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> in <generateExp(componentId, rhs)>)";
     case \and(lhs, rhs):
-      return "(<generateExp(lhs)> and <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> and <generateExp(componentId, rhs)>)";
     case \or(lhs, rhs):
-      return "(<generateExp(lhs)> or <generateExp(rhs)>)";
+      return "(<generateExp(componentId, lhs)> or <generateExp(componentId, rhs)>)";
     case \not(inner):
-      return "(not <generateExp(inner)>)";
+      return "(not <generateExp(componentId, inner)>)";
   }
 
   return "None";
 }
 
-str generateLValue(LValue lval) {
+str generateLValue(str componentId, LValue lval) {
   switch (lval) {
     case var(name):
       return name;
@@ -458,9 +458,9 @@ str generateLValue(LValue lval) {
       return "<owner>.<fieldName>";
     }
     case field(lhs, fieldName):
-      return "<generateLValue(lhs)>.<fieldName>";
+      return "<generateLValue(componentId, lhs)>.<fieldName>";
     case index(lhs, idx):
-      return "<generateLValue(lhs)>[<generateExp(idx)>]";
+      return "<generateLValue(componentId, lhs)>[<generateExp(componentId, idx)>]";
   }
 
   return "";
@@ -494,15 +494,15 @@ str eventPredicate(str componentId, Event event) {
     case anyMessageFromPort(portName):
       return "isinstance(event, <portClass(componentId, portName)>)";
     case specificMessageFromPort(payload, portName):
-      return "isinstance(event, <portClass(componentId, portName)>) and event.data == <generateExp(payload)>";
+      return "isinstance(event, <portClass(componentId, portName)>) and event.data == <generateExp(componentId, payload)>";
   }
   return "False";
 }
 
-str conditionPredicate(Func f) {
+str conditionPredicate(str componentId, Func f) {
   switch (f) {
     case func(_, [\return(exp)], _):
-      return generateExp(exp);
+      return generateExp(componentId, exp);
     default:
       return "True";
   }
@@ -550,7 +550,7 @@ Type findPortType(str portName, list[Port] ports) {
 
 str portClass(str componentId, str portName) = "<componentId><portName>";
 
-str stateClass(str name) = "State<name>";
+str stateClass(str componentId, str name) = "State<componentId><name>";
 
 str typeName(Type tp) {
   switch (tp) {
@@ -582,10 +582,10 @@ list[str] indent(list[str] lines, int spaces) {
   return result;
 }
 
-str generateExpList(list[Exp] values) {
+str generateExpList(str componentId, list[Exp] values) {
   list[str] generated = [];
   for (Exp e <- values) {
-    generated += [generateExp(e)];
+    generated += [generateExp(componentId, e)];
   }
   return joinComma(generated);
 }
