@@ -21,7 +21,7 @@ data CheckError
   | cannotInferConnectionType(Connection connection)
   | cannotInferChannelType(Connection connection)
   | typeMismatch(Type expected, Type actual)
-  | invalidOperand(str operator, Type actual)
+  | invalidOperand(str operator, Type actual, str msg)
   | invalidCondition(Type actual)
   | invalidReturn(Type expected, Type actual)
   | invalidSend(str reason)
@@ -512,7 +512,7 @@ tuple[Type, list[CheckError]] inferExp(Exp exp, VarTable env, TypeTable types, S
       tuple[Type, list[CheckError]] inferred = inferExp(inner, env, types, states);
       list[CheckError] errors = inferred[1];
       if (!compatible(booleanT(), inferred[0])) {
-        errors += [invalidOperand("not", inferred[0])];
+        errors += [invalidOperand("not", inferred[0], "<inner>")];
       }
       return <booleanT(), errors>;
     }
@@ -716,10 +716,10 @@ tuple[Type, list[CheckError]] inferNumericBinary(str op, Exp lhs, Exp rhs, VarTa
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(integerT(), left[0])) {
-    errors += [invalidOperand(op, left[0])];
+    errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
   }
   if (!compatible(integerT(), right[0])) {
-    errors += [invalidOperand(op, right[0])];
+    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
   }
   return <integerT(), errors>;
 }
@@ -734,7 +734,7 @@ tuple[Type, list[CheckError]] inferEquality(str op, Exp lhs, Exp rhs, VarTable e
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(left[0], right[0])) {
-    errors += [invalidOperand(op, right[0])];
+    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
   }
   return <booleanT(), errors>;
 }
@@ -744,10 +744,10 @@ tuple[Type, list[CheckError]] inferBooleanBinary(str op, Exp lhs, Exp rhs, VarTa
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(booleanT(), left[0])) {
-    errors += [invalidOperand(op, left[0])];
+    errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
   }
   if (!compatible(booleanT(), right[0])) {
-    errors += [invalidOperand(op, right[0])];
+    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
   }
   return <booleanT(), errors>;
 }
