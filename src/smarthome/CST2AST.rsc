@@ -220,7 +220,7 @@ Exp cst2ast((Exp) `<Exp lhs> \<= <Exp rhs>`) = smarthome::AST::leq(cst2ast(lhs),
 
 Exp cst2ast((Exp) `<Exp lhs> == <Exp rhs>`) = smarthome::AST::eq(cst2ast(lhs), cst2ast(rhs));
 
-Exp cst2ast((Exp) `<Exp lhs> != <Exp rhs>`) = smarthome::AST::neq(cst2ast(lhs), cst2ast(rhs));
+Exp cst2ast(Exp tree: (Exp) `<Exp lhs> in <Exp rhs>`) = smarthome::AST::\in(cst2ast(lhs), cst2ast(rhs), src=tree.src);
 
 Exp cst2ast((Exp) `<Exp lhs> and <Exp rhs>`) = smarthome::AST::\and(cst2ast(lhs), cst2ast(rhs));
 

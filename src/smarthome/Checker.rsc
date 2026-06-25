@@ -503,6 +503,9 @@ tuple[Type, list[CheckError]] inferExp(Exp exp, VarTable env, TypeTable types, S
     case neq(lhs, rhs):
       return inferEquality("!=", lhs, rhs, env, types, states);
 
+    case \in(lhs, rhs):
+      return inferIsIn("in", lhs, rhs, env, types, states);
+
     case \and(lhs, rhs):
       return inferBooleanBinary("and", lhs, rhs, env, types, states);
     case \or(lhs, rhs):
@@ -727,6 +730,27 @@ tuple[Type, list[CheckError]] inferNumericBinary(str op, Exp lhs, Exp rhs, VarTa
 tuple[Type, list[CheckError]] inferComparison(str op, Exp lhs, Exp rhs, VarTable env, TypeTable types, StateTable states) {
   tuple[Type, list[CheckError]] numeric = inferNumericBinary(op, lhs, rhs, env, types, states);
   return <booleanT(), numeric[1]>;
+}
+
+
+tuple[Type, list[CheckError]] inferIsIn(str op, Exp lhs, Exp rhs, VarTable env, TypeTable types, StateTable states) {
+  tuple[Type, list[CheckError]] left = inferExp(lhs, env, types, states);
+  tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
+  list[CheckError] errors = left[1] + right[1];
+  switch (right[0]) {
+    case mapT(keyType, _): {
+      if (!compatible(left[0], keyType)) {
+        errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
+      }
+    }
+    case listT(arrType): {
+      if (!compatible(left[0], arrType)) {
+        errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
+      }
+    }
+  }
+
+  return <booleanT(), errors>;
 }
 
 tuple[Type, list[CheckError]] inferEquality(str op, Exp lhs, Exp rhs, VarTable env, TypeTable types, StateTable states) {

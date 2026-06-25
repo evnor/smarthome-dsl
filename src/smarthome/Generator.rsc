@@ -400,6 +400,8 @@ str generateExp(Exp exp) {
       return "(<generateExp(lhs)> \>= <generateExp(rhs)>)";
     case leq(lhs, rhs):
       return "(<generateExp(lhs)> \<= <generateExp(rhs)>)";
+    case \in(lhs, rhs):
+      return "(<generateExp(lhs)> in <generateExp(rhs)>)";
     case \and(lhs, rhs):
       return "(<generateExp(lhs)> and <generateExp(rhs)>)";
     case \or(lhs, rhs):
