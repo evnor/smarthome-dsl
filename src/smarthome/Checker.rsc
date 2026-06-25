@@ -294,9 +294,10 @@ list[CheckError] checkFSM(str componentName, list[Port] ports, FSM fsm, TypeTabl
           errors += [unknownState(componentName, targetName)];
         }
 
-        errors += checkEvent(event, portTypes, types, stateTable);
-        errors += checkFunc(condition, booleanT(), sourceName, portTypes, types, stateTable);
-        errors += checkFunc(action, namedT(targetName), sourceName, portTypes, types, stateTable);
+        <portName, errs> = checkEvent(event, portTypes, types, stateTable);
+        errors += errs;
+        errors += checkFunc(condition, booleanT(), funcCondition(sourceName), portTypes, types, stateTable);
+        errors += checkFunc(action, namedT(targetName), funcAction(sourceName, portName), portTypes, types, stateTable);
       }
 
       return errors;
@@ -306,18 +307,18 @@ list[CheckError] checkFSM(str componentName, list[Port] ports, FSM fsm, TypeTabl
   return [];
 }
 
-list[CheckError] checkEvent(Event event, VarTable portTypes, TypeTable types, StateTable states) {
+tuple[str, list[CheckError]] checkEvent(Event event, VarTable portTypes, TypeTable types, StateTable states) {
   switch (event) {
     case anyMessageFromPort(portName): {
       if (portName in portTypes) {
-        return [];
+        return <portName, []>;
       }
-      return [unknownPort("", portName)];
+      return <portName, [unknownPort("", portName)]>;
     }
 
     case specificMessageFromPort(payload, portName): {
       if (portName notin portTypes) {
-        return [unknownPort("", portName)];
+        return <portName, [unknownPort("", portName)]>;
       }
 
       tuple[Type, list[CheckError]] inferred = inferExp(payload, (), types, states);
@@ -325,14 +326,20 @@ list[CheckError] checkEvent(Event event, VarTable portTypes, TypeTable types, St
       if (!compatible(portTypes[portName], inferred[0])) {
         errors += [typeMismatch(portTypes[portName], inferred[0])];
       }
-      return errors;
+      return <portName, errors>;
     }
   }
 
-  return [];
+  return <"", []>;
 }
 
-list[CheckError] checkFunc(Func function, Type expectedReturn, str sourceState, VarTable portTypes, TypeTable types, StateTable states) {
+data FuncType
+= funcCondition(str sourceState)
+| funcAction(str sourceState, str portName)
+| funcOther()
+;
+
+list[CheckError] checkFunc(Func function, Type expectedReturn, FuncType funcType, VarTable portTypes, TypeTable types, StateTable states) {
   switch (function) {
     case func(params, body, declaredReturn): {
       VarTable env = ();
@@ -341,8 +348,35 @@ list[CheckError] checkFunc(Func function, Type expectedReturn, str sourceState, 
       int i = 0;
       for (<tp, name> <- params) {
         Type paramType = tp;
-        if (paramType == inferredT() && i == 0) {
-          paramType = namedT(sourceState);
+        Option[Type] expected = none();
+        switch (funcType) {
+          case funcCondition(sourceState): {
+            if (i == 0) {
+              expected = some(namedT(sourceState));
+            } else {
+              errors += [wrongArity("condition on <sourceState>", 1, size(params))];
+            }
+          }
+          case funcAction(sourceState, portName): {
+            if (i == 0) {
+              expected = some(namedT(sourceState));
+            } else if (i == 1) {
+              expected = some(portTypes[portName]);
+            } else {
+              errors += [wrongArity("action on <sourceState>", 2, size(params))];
+            }
+          }
+        }
+        switch (expected) {
+          case some(expect): {
+            if (paramType == inferredT()) {
+              paramType = expect;
+            } else {
+              if (!compatible(expect, paramType)) {
+                errors += [typeMismatch(expect, paramType)];
+              }
+            }
+          }
         }
         env += (name: paramType);
         errors += checkType(paramType, types, states);
