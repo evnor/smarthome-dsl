@@ -1,0 +1,125 @@
+{
+  components: [
+    SecurityGate: {
+      [
+        port(ID_SCANNER, str),
+        port(TIMER, TimerEvent),
+        port(TO_REGISTRY, str),
+        port(FROM_REGISTRY, bool),
+      ],
+      {
+        states: [
+          Closed(),
+          Checking(),
+          Open(seconds: int),
+        ],
+        initial: Closed(),
+        transition(
+          Closed -> Checking,
+          ID_SCANNER,
+          action: (state, msg) {
+            send(TO_REGISTRY, msg);
+            return Checking();
+          }
+        ),
+        transition(
+          Checking -> Closed,
+          (FROM_REGISTRY, false),
+          action: (state) {
+            return Closed();
+          }
+        ),
+        transition(
+          Checking -> Open,
+          (FROM_REGISTRY, true),
+          action: (state) {
+            return Open(2);
+          }
+        ),
+        transition(
+          Open -> Open,
+          TIMER,
+          condition: (state) = state.seconds > 1,
+          action: (state) {
+            return Open(state.seconds - 1);
+          }
+        ),
+        transition(
+          Open -> Closed,
+          TIMER,
+          condition: (state) = state.seconds <= 1,
+          action: (state) {
+            return Closed();
+          }
+        ),
+      }
+    },
+    Registry: {
+      [
+        port(REGISTER, tuple[str, SecurityLevel]),
+        port(QUERY, str),
+        port(ANSWER, SecurityLevel),
+      ],
+      {
+        states: [
+          Idle(registry: map[str, SecurityLevel]),
+        ],
+        initial: Idle({ }), // Idle({ "Alice" = SecurityLevel.STAFF }),
+        transition(
+          Idle -> Idle,
+          REGISTER,
+          action: (state, msg) {
+            let reg = state.registry;
+            reg[msg[0]] = msg[1];
+            return Idle(reg);
+          }
+        ),
+        transition(
+          Idle -> Idle,
+          QUERY,
+          action: (state, msg) {
+            if msg in state.registry then
+              if state.registry[msg] == SecurityLevel.STAFF then
+                send(ANSWER, true);
+                return Idle(state.registry);
+              end
+            end
+            send(ANSWER, false);
+            return Idle(state.registry);
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/register")),
+      target(Registry, REGISTER)
+    },
+    {
+      source(http_json("/scanner")),
+      target(SecurityGate, ID_SCANNER)
+    },
+    {
+      source(http_json("/timer")),
+      target(SecurityGate, TIMER)
+    },
+    {
+      source(SecurityGate, TO_REGISTRY),
+      target(Registry, QUERY)
+    },
+    {
+      source(Registry, ANSWER),
+      target(SecurityGate, FROM_REGISTRY)
+    },
+  ],
+  types: [
+    enum TimerEvent {
+      TICK,
+    },
+    enum SecurityLevel {
+      STAFF,
+      GUEST,
+    },
+  ]
+}
