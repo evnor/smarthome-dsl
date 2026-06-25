@@ -1,0 +1,43 @@
+{
+  components: [
+    FibonacciServer: {
+      [
+        port(QUERY, int),
+        port(ANSWER, int),
+      ],
+      {
+        states: [
+            Idle(),
+        ],
+        initial: Idle(),
+        transition(
+          Idle -> Idle,
+          QUERY,
+          action: (state, depth) {
+            let a = 1;
+            let b: int = 1;
+            let tmp: int;
+            while depth > 1 do
+                tmp = a + b;
+                a = b;
+                b = tmp;
+                depth = depth - 1;
+            end
+            send(ANSWER, b);
+            return Idle();
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/query")),
+      target(FibonacciServer, QUERY)
+    },
+    {
+      source(FibonacciServer, ANSWER),
+      target(http_json("/answer"))
+    },
+  ],
+}
