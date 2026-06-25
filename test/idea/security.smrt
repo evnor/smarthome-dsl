@@ -58,7 +58,7 @@
       [
         port(REGISTER, tuple[str, SecurityLevel]),
         port(QUERY, str),
-        port(ANSWER, SecurityLevel),
+        port(ANSWER, bool),
       ],
       {
         states: [

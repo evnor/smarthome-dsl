@@ -21,7 +21,7 @@ data CheckError
   | unknownFunction(str name)
   | cannotInferConnectionType(Connection connection)
   | cannotInferChannelType(Connection connection)
-  | typeMismatch(Type expected, Type actual)
+  | typeMismatch(Type expected, Type actual, str msg)
   | invalidOperand(str operator, Type actual, str msg)
   | invalidCondition(Type actual)
   | invalidReturn(Type expected, Type actual)
@@ -171,7 +171,7 @@ list[CheckError] checkTypeDefinitions(System sys, TypeTable types) {
       tuple[Type, list[CheckError]] inferred = inferExp(exp, (), types, ());
       errors += inferred[1];
       if (!compatible(baseType, inferred[0])) {
-        errors += [typeMismatch(baseType, inferred[0])];
+        errors += [typeMismatch(baseType, inferred[0], "<name> = <exp>")];
       }
     }
   }
@@ -325,7 +325,7 @@ tuple[str, list[CheckError]] checkEvent(Event event, VarTable portTypes, TypeTab
       tuple[Type, list[CheckError]] inferred = inferExp(payload, (), types, states);
       list[CheckError] errors = inferred[1];
       if (!compatible(portTypes[portName], inferred[0])) {
-        errors += [typeMismatch(portTypes[portName], inferred[0])];
+        errors += [typeMismatch(portTypes[portName], inferred[0], "")];
       }
       return <portName, errors>;
     }
@@ -374,7 +374,7 @@ list[CheckError] checkFunc(Func function, Type expectedReturn, FuncType funcType
               paramType = expect;
             } else {
               if (!compatible(expect, paramType)) {
-                errors += [typeMismatch(expect, paramType)];
+                errors += [typeMismatch(expect, paramType, "Condition/Action functions have <expect> at param index <i>")];
               }
             }
           }
@@ -439,7 +439,7 @@ tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement
       }
       list[CheckError] errors = checkType(declared, types) + inferred[1];
       if (!compatible(declared, inferred[0])) {
-        errors += [typeMismatch(declared, inferred[0])];
+        errors += [typeMismatch(declared, inferred[0], "<name>")];
       }
       return <env + (name: declared), errors, []>;
     }
@@ -449,7 +449,7 @@ tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement
       tuple[Type, list[CheckError]] rhs = inferExp(rval, env, types, states);
       list[CheckError] errors = lhs[1] + rhs[1];
       if (!compatible(lhs[0], rhs[0])) {
-        errors += [typeMismatch(lhs[0], rhs[0])];
+        errors += [typeMismatch(lhs[0], rhs[0], "<lval>")];
       }
       return <env, errors, []>;
     }
@@ -508,7 +508,7 @@ list[CheckError] checkSend(list[Exp] params, VarTable env, VarTable portTypes, T
       tuple[Type, list[CheckError]] payload = inferExp(params[1], env, types, states);
       list[CheckError] errors = payload[1];
       if (!compatible(portTypes[portName], payload[0])) {
-        errors += [typeMismatch(portTypes[portName], payload[0])];
+        errors += [typeMismatch(portTypes[portName], payload[0], "<portName>")];
       }
       return errors;
     }
@@ -609,7 +609,7 @@ tuple[Type, list[CheckError]] inferPrimitive(Primitive primitive) {
         tuple[Type, list[CheckError]] inferred = inferPrimitive(v);
         errors += inferred[1];
         if (!compatible(elemType, inferred[0])) {
-          errors += [typeMismatch(elemType, inferred[0])];
+          errors += [typeMismatch(elemType, inferred[0], "<primitive>")];
         }
         i += 1;
       }
@@ -631,7 +631,7 @@ tuple[Type, list[CheckError]] inferPrimitive(Primitive primitive) {
           first = false;
         }
         else if (!compatible(valueType, inferred[0])) {
-          errors += [typeMismatch(valueType, inferred[0])];
+          errors += [typeMismatch(valueType, inferred[0], "<primitive>")];
         }
       }
       return <\mapT(stringT(), valueType), errors>;
@@ -682,19 +682,19 @@ tuple[Type, list[CheckError]] inferLValue(LValue lval, VarTable env, TypeTable t
       switch (owner[0]) {
         case \listT(elemType): {
           if (!compatible(integerT(), indexType[0])) {
-            errors += [typeMismatch(integerT(), indexType[0])];
+            errors += [typeMismatch(integerT(), indexType[0], "index on list")];
           }
           return <elemType, errors>;
         }
         case \mapT(keyType, valueType): {
           if (!compatible(keyType, indexType[0])) {
-            errors += [typeMismatch(keyType, indexType[0])];
+            errors += [typeMismatch(keyType, indexType[0], "index on map")];
           }
           return <valueType, errors>;
         }
         case \tupleT(tupleTypes): {
           if (!compatible(integerT(), indexType[0])) {
-            errors += [typeMismatch(integerT(), indexType[0])];
+            errors += [typeMismatch(integerT(), indexType[0], "index on tuple")];
           }
           switch (idx) {
             case primCon(integer(val)): {
@@ -762,7 +762,7 @@ tuple[Type, list[CheckError]] inferCall(str name, list[Exp] params, VarTable env
       tuple[Type, list[CheckError]] arg = inferExp(params[i], env, types, states);
       errors += arg[1];
       if (!compatible(field[1], arg[0])) {
-        errors += [typeMismatch(field[1], arg[0])];
+        errors += [typeMismatch(field[1], arg[0], "Invalid args")];
       }
       i += 1;
     }
@@ -779,7 +779,7 @@ tuple[Type, list[CheckError]] inferCall(str name, list[Exp] params, VarTable env
       tuple[Type, list[CheckError]] arg = inferExp(param, env, types, states);
       errors += arg[1];
       if (!compatible(integerT(), arg[0])) {
-        errors += [typeMismatch(integerT(), arg[0])];
+        errors += [typeMismatch(integerT(), arg[0], "min/max want nums")];
       }
     }
     return <integerT(), errors>;
