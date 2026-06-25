@@ -169,9 +169,12 @@ Statement cst2ast((Statement) `let <LValue lval> = <Exp rval>;`) {
 Statement cst2ast((Statement) `if <Exp cond> then <Statement* ifpart> else <Statement* elsepart> end`) {
   return ifElseStat(cst2ast(cond), [cst2ast(s) | s <- ifpart], [cst2ast(s) | s <- elsepart]);
 }
+Statement cst2ast(Statement tree: (Statement) `if <Exp cond> then <Statement* ifpart> end`) {
+  return ifElseStat(cst2ast(cond), [cst2ast(s) | s <- ifpart], [], src=tree.src);
+}
 
-Statement cst2ast((Statement) `while <Exp cond> do <Statement* body> end`) {
-  return whileStat(cst2ast(cond), [cst2ast(s) | s <- body]);
+Statement cst2ast(Statement tree: (Statement) `while <Exp cond> do <Statement* body> end`) {
+  return whileStat(cst2ast(cond), [cst2ast(s) | s <- body], src=tree.src);
 }
 
 Statement cst2ast((Statement) `continue;`) = smarthome::AST::\continue();

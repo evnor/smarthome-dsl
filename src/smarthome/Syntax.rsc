@@ -26,6 +26,7 @@ keyword Reserved
 | "and"
 | "or"
 | "not"
+| "in"
 | "int"
 | "bool"
 | "str"
@@ -157,6 +158,7 @@ non-assoc (
     non-assoc eq: Exp "==" Exp
   | non-assoc neq: Exp "!=" Exp
 )
+> non-assoc \in: Exp "in" Exp
 > left and: Exp "and" Exp
 > left or: Exp "or" Exp
 ;
@@ -170,6 +172,7 @@ syntax Statement
 | "let" LValue lval "=" Exp rval ";" // decl+assign (inferred type)
 
 | ifElseStat: "if" Exp cond "then" Statement* ifpart "else" Statement* elsepart "end"
+| ifStat: "if" Exp cond "then" Statement* ifpart "end"
 | whileStat: "while" Exp cond "do" Statement* body "end"
 | \continue: "continue" ";"
 | \break: "break" ";"
