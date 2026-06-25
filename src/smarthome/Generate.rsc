@@ -22,5 +22,12 @@ public int main(list[str] args) {
 
 loc fileLoc(str uriOrPath) {
   str normalized = replaceAll(uriOrPath, "\\", "/");
-  return |file:///<normalized>|;
+  if (startsWith(uriOrPath, "/")) {
+    return |file://<normalized>|;
+  }
+  if (startsWith(uriOrPath, "~")) {
+    normalized = substring(normalized, 1);
+    return |home:///<normalized>|;
+  }
+  return |cwd:///<normalized>|;
 }
