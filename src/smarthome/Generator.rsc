@@ -58,7 +58,7 @@ public str generatePython(System sys) {
     "",
     "class State(ABC):",
     "    @abstractmethod",
-    "    def step(self, event): ...",
+    "    def step(self, event) -\> \"State\": ...",
     ""
   ];
 
