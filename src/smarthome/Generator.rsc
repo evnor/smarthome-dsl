@@ -293,32 +293,7 @@ list[str] generateRuntime(list[Component] components, list[Connection] connectio
             "            body = self.rfile.read(content_length)",
             "            data = json.loads(body)"
           ];
-          switch (portType) {
-            case inferredT(): {
-              throw "This should be unreachable, but <portName> has type inferredT";
-            }
-            case integerT(): {
-              lines += [];
-            }
-            case booleanT(): {
-              lines += [];
-            }
-            case stringT(): {
-              lines += [];
-            }
-            case namedT(name): {
-              lines += ["            data = list(<typeName(portType)>)[data[\"IntEnumValue\"]]"];
-            }
-            case \mapT(keyType, valueType): {
-              lines += [];
-            }
-            case \listT(arrType): {
-              lines += [];
-            }
-            case \tupleT(tupleTypes): {
-              lines += ["            data = tuple(data)"];
-            }
-          }
+          lines += indent(generateDataMarshallExpr(portType, portName), 12);
           lines += [
             "            event = <portClass(componentId, portName)>(data)",
             "            handle_event(event)",
@@ -609,6 +584,39 @@ str generatePrimitiveMap(map[str, Primitive] values) {
     generated += ["\"<key>\":<generatePrimitive(val)>"];
   }
   return joinComma(generated);
+}
+
+list[str] generateDataMarshallExpr(Type tp, str portName) {
+  switch (tp) {
+    case inferredT(): {
+      throw "This should be unreachable. Port <portName> has type inferredT";
+    }
+    case namedT(name): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \mapT(keyType, valueType): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \listT(arrType): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \tupleT(tupleTypes): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    default: return [];
+  }
+}
+
+str generateMarshallingExpr(str accessor, Type tp, int depth) {
+  switch (tp) {
+      case namedT(name): return "<name>(<accessor>)";
+      case \mapT(keyType, valueType): return "{<generateMarshallingExpr("k<depth>", keyType, depth+1)>: <generateMarshallingExpr("v<depth>", valueType, depth+1)> for k<depth>, v<depth> in <accessor>.items()}";
+      case \listT(arrType): return "[<generateMarshallingExpr("el<depth>", arrType, depth+1)> for el<depth> in <accessor>]";
+      case \tupleT(tupleTypes): return generateTupleMarshallExpr(accessor, tupleTypes, depth+1);
+      case integerT(): return "int(<accessor>)"; // These could be just "<accessor>", but this way we catch unexpected values
+      case booleanT(): return "bool(<accessor>)";
+      case stringT(): return "str(<accessor>)";
+  }
+}
+
+str generateTupleMarshallExpr(str accessor, list[Type] types, int depth) {
+  list[str] exprs = [generateMarshallingExpr("<accessor>[<i>]", types[i], depth) | i <- [0..size(types)]];
+  if (size(exprs) == 0) {
+    return "tuple()";
+  }
+  return "(<joinComma(exprs)>,)";
 }
 
 str typeNameList(list[Type] values) {

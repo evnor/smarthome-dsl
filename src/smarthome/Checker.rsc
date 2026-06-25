@@ -173,6 +173,18 @@ list[CheckError] checkTypeDefinitions(System sys, TypeTable types) {
       if (!compatible(baseType, inferred[0])) {
         errors += [typeMismatch(baseType, inferred[0], "<name> = <exp>")];
       }
+      switch (<baseType, inferred[0]>) {
+        case <tp, inferredT()>: {
+          if (tp != integerT()) {
+            errors += [typeMismatch(integerT(), tp, "Enums currently only support integers (<name>)")];
+          }
+        }
+        case <inferredT(), tp>: {
+          if (tp != integerT()) {
+            errors += [typeMismatch(integerT(), tp, "Enums currently only support integers (<name>)")];
+          }
+        }
+      }
     }
   }
 
