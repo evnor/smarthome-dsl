@@ -226,14 +226,21 @@ list[str] generateTransition(str componentId, list[Port] ports, Event event, Fun
   str eventCheck = eventPredicate(componentId, event);
   str conditionCheck = conditionPredicate(condition);
   list[Statement] actionBody = [];
+  list[tuple[Type, str]] actionParams = [];
   switch (action) {
-    case func(_, body, _):
+    case func(params, body, _): {
       actionBody = body;
+      actionParams = params;
+    }
   }
   list[str] lines = [
     "        if <eventCheck>:",
     "            if <conditionCheck>:"
   ];
+
+  if (size(actionParams) >= 2) {
+    lines += indent(["<actionParams[1][1]> = event.data"], 16);
+  }
 
   lines += indent(generateStatements(componentId, actionBody), 16);
   return lines;
@@ -283,8 +290,35 @@ list[str] generateRuntime(Component componentDef, list[Connection] connections) 
             "        <prefix> self.path == \"<uri>\":",
             "            content_length = int(self.headers.get(\"Content-Length\", 0))",
             "            body = self.rfile.read(content_length)",
-            "            data = json.loads(body)[\"IntEnumValue\"]",
-            "            data = list(<typeName(portType)>)[data]",
+            "            data = json.loads(body)"
+          ];
+          switch (portType) {
+            case inferredT(): {
+              throw "This should be unreachable, but <portName> has type inferredT";
+            }
+            case integerT(): {
+              lines += [];
+            }
+            case booleanT(): {
+              lines += [];
+            }
+            case stringT(): {
+              lines += [];
+            }
+            case namedT(name): {
+              lines += ["            data = list(<typeName(portType)>)[data[\"IntEnumValue\"]]"];
+            }
+            case \mapT(keyType, valueType): {
+              lines += [];
+            }
+            case \listT(arrType): {
+              lines += [];
+            }
+            case \tupleT(tupleTypes): {
+              lines += ["            data = tuple(data)"];
+            }
+          }
+          lines += [
             "            event = <portClass(componentId, portName)>(data)",
             "            handle_event(event)",
             "            self.send_response(200)",
