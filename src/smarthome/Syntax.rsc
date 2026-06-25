@@ -6,8 +6,8 @@ lexical IdentLexical =  [a-zA-Z][a-zA-Z0-9_]* !>> [a-zA-Z0-9_];
 syntax Ident = IdentLexical \ Reserved;
 
 lexical Natural = [0-9]+ !>> [0-9];
-lexical String = string: "\"" Char* "\"";
-lexical Char = "\\" ![] | ![\\];
+lexical String = "\"" Char* "\"";
+lexical Char = "\\" ![] | ![\\\"]; // '\' and '"' need escaping
 
 extend  lang::std::Layout;
 
