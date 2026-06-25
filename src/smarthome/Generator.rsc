@@ -199,10 +199,10 @@ list[str] generateStates(Component componentDef, list[Connection] connections) {
           for (<fieldName, tp> <- fields) {
             lines += ["    <fieldName>: <typeName(tp)>"];
           }
+          lines += [""];
         }
 
         lines += [
-          "",
           "    def step(self, event):"
         ];
 
