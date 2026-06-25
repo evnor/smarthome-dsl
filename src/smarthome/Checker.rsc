@@ -1,6 +1,7 @@
 module smarthome::Checker
 
 import List;
+import IO;
 
 import smarthome::AST;
 
@@ -691,8 +692,26 @@ tuple[Type, list[CheckError]] inferLValue(LValue lval, VarTable env, TypeTable t
           }
           return <valueType, errors>;
         }
+        case \tupleT(tupleTypes): {
+          if (!compatible(integerT(), indexType[0])) {
+            errors += [typeMismatch(integerT(), indexType[0])];
+          }
+          switch (idx) {
+            case primCon(integer(val)): {
+              if (val >= size(tupleTypes)) {
+                errors += [invalidOperand("index", owner[0], "<lhs>, <idx>")];
+              } else {
+                return <tupleTypes[val], errors>;
+              }
+            }
+            default: {
+              errors += [invalidOperand("index", owner[0], "Index of tuple should be integer literal")];
+              return <owner[0], errors>;
+            }
+          }
+        }
         default:
-          return <inferredT(), errors + [invalidOperand("index", owner[0])]>;
+          return <inferredT(), errors + [invalidOperand("index", owner[0], "<lhs>, <idx>")]>;
       }
     }
   }
