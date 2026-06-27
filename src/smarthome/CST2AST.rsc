@@ -94,7 +94,7 @@ State cst2astStateDecl((StateDecl) `<Ident name>(<{IdentWithType ","}* fields>)`
   return state(cst2ast(name), [cst2ast(f) | f <- fields]);
 }
 
-Exp cst2ast((Initial) `initial: <StateCon initial>`) {
+Exp cst2ast((Initial) `initial: <Exp initial>`) {
   return cst2ast(initial);
 }
 
@@ -199,7 +199,7 @@ Exp cst2ast((Exp) `(<Exp exp>)`) = cst2ast(exp);
 
 Exp cst2ast((Exp) `<Primitive primitive>`) = smarthome::AST::primCon(cst2ast(primitive));
 
-Exp cst2ast((Exp) `<StateCon stateCon>`) = cst2ast(stateCon);
+Exp cst2ast((Exp) `<Ident name>(<{Exp ","}* params>)`) = call(cst2ast(name), [cst2ast(p) | p <- params]);
 
 Exp cst2ast((Exp) `<LValue lval>`) = smarthome::AST::lvalue(cst2ast(lval));
 
@@ -230,10 +230,6 @@ Exp cst2ast((Exp) `<Exp lhs> in <Exp rhs>`) = smarthome::AST::\in(cst2ast(lhs), 
 Exp cst2ast((Exp) `<Exp lhs> and <Exp rhs>`) = smarthome::AST::\and(cst2ast(lhs), cst2ast(rhs));
 
 Exp cst2ast((Exp) `<Exp lhs> or <Exp rhs>`) = smarthome::AST::\or(cst2ast(lhs), cst2ast(rhs));
-
-Exp cst2ast((StateCon) `<Ident name>(<{Exp ","}* params>)`) {
-  return call(cst2ast(name), [cst2ast(p) | p <- params]);
-}
 
 Primitive cst2ast((Primitive) `<Natural n>`) = integer(toInt("<n>"));
 

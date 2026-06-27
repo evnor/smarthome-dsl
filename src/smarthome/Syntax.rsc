@@ -35,6 +35,8 @@ keyword Reserved
 | "tuple"
 | "continue"
 | "break"
+| "min"
+| "max"
 ;
 
 start syntax System
@@ -74,7 +76,7 @@ syntax States = "states" ":" "[" ({StateDecl ","}+ ",")? "]";
 
 syntax StateDecl = Ident "(" {IdentWithType ","}* ")";
 
-syntax Initial = "initial" ":" StateCon;
+syntax Initial = "initial" ":" Exp;
 
 syntax Transition = "transition" "("
 Ident "-\>" Ident ","
@@ -135,9 +137,8 @@ syntax LValue
 syntax Exp 
 = bracket "(" Exp ")"
 | primCon: Primitive
-| stateCon: StateCon
 | lvalue: LValue // When constructing an enum, it is initially parsed as LValue
-// | call: Ident "(" {Exp ","}* ")"
+| call: Ident "(" {Exp ","}* ")"
 > right not: "not" Exp
 > non-assoc (
     left mul: Exp "*" Exp 
@@ -162,8 +163,6 @@ non-assoc (
 > left and: Exp "and" Exp
 > left or: Exp "or" Exp
 ;
-
-syntax StateCon = Ident "(" {Exp ","}* ")";
 
 syntax Statement
 = declStat: "let" LValue lval ":" Type tp ";"
