@@ -1,0 +1,34 @@
+{
+  components: [
+    Minimal: {
+      [
+        port(QUERY, int),
+      ],
+      {
+        states: [
+            Idle(),
+        ],
+        initial: Idle(),
+        transition(
+          Idle -> Idle,
+          QUERY,
+          action: (state, depth) {
+            let a = 1;
+            let b = "2";
+            let c1: int = a + b;
+            let c2: int = b;
+            let d1: str = a + b;
+            let d2: str = a;
+            return Idle();
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/query")),
+      target(Minimal, QUERY)
+    },
+  ],
+}
