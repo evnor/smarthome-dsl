@@ -1,0 +1,58 @@
+{
+  components: [
+    Minimal: {
+      [
+        port(QUERY, int),
+        port(QUERY, str), // Duplicate port
+      ],
+      {
+        states: [
+            Idle(),
+            Idle(foo: int), // Duplicate state
+        ],
+        initial: Idle(),
+        transition(
+          Idle -> Idle,
+          QUERY,
+          action: (state, depth) {
+            return Idle();
+          }
+        ),
+      }
+    },
+    Minimal: { // Duplicate component
+      [
+        port(QUERY, int),
+      ],
+      {
+        states: [
+            Idle(),
+        ],
+        initial: Idle(),
+        transition(
+          Idle -> Idle,
+          QUERY,
+          action: (state, depth) {
+            return Idle();
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/query")),
+      target(Minimal, QUERY)
+    },
+  ],
+  types: [
+    enum CarEvent {
+      CAR_IN = 0,
+      CAR_OUT = 1,
+    },
+    enum CarEvent { // Duplicate type
+      CAR_OUT = 1,
+      CAR_OUT = 1, // Duplicate Enum value, duplicate enum value repr
+    },
+  ]
+}

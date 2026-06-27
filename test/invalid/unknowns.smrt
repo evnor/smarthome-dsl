@@ -1,0 +1,44 @@
+{
+  components: [
+    Minimal: {
+      [
+        port(QUERY, int),
+      ],
+      {
+        states: [
+            Idle(),
+        ],
+        initial: Idle(),
+        transition(
+          Idle -> SomeOtherState, // Unknown state
+          QUERY,
+          action: (state, depth) {
+            send(ANSWER, SomeEnum.Foo); // Unknown port, (and Unknown enum value, if it were possible. See comment on unknownEnumValue)
+            let a: foo; // Unknown type
+            let b = state.bar; // Unknown field
+            let c = avg(); // Unknown function
+            return Idle();
+          }
+        ),
+      }
+    },
+  ],
+  connections: [
+    {
+      source(http_json("/query")),
+      target(Minimal, QUERY)
+    },
+    {
+      source(http_json("/query")),
+      target(Minimal, FOO) // Unknown port
+    },
+    {
+      source(http_json("/query")),
+      target(Foo, BAR) // Unknown component
+    },
+  ],
+  types: [
+    enum SomeEnum {
+    },
+  ]
+}

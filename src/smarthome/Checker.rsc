@@ -9,7 +9,11 @@ data CheckError
   = duplicateComponent(str component)
   | duplicatePort(str component, str port)
   | duplicateType(str name)
+  // Unknown Enum Value is actually impossible
+  // Enums values (MyEnum.foo) are initially parsed as LValues
+  // They're only reinterpreted as enums if both enum name and value are recognized
   | duplicateEnumValue(str enumName, str valueName)
+  | duplicateEnumValueRepr(str enumName, str valueName, Exp repr)
   | duplicateState(str component, str stateName)
   | unknownComponent(str component)
   | unknownPort(str component, str port)
@@ -20,7 +24,6 @@ data CheckError
   | unknownField(Type owner, str field)
   | unknownFunction(str name)
   | cannotInferConnectionType(Connection connection)
-  | cannotInferChannelType(Connection connection)
   | typeMismatch(Type expected, Type actual, str msg)
   | invalidOperand(str operator, Type actual, str msg)
   | invalidCondition(Type actual)
@@ -137,11 +140,20 @@ list[CheckError] checkDuplicates(System sys) {
     typeNames += [name];
 
     list[str] valueNames = [];
-    for (enumValueDef(valueName, _) <- values) {
+    list[Exp] valueReprs = [];
+    for (enumValueDef(valueName, valueRepr) <- values) {
       if (valueName in valueNames) {
         errors += [duplicateEnumValue(name, valueName)];
       }
       valueNames += [valueName];
+      switch (valueRepr) {
+        case some(r): {
+          if (r in valueReprs) {
+            errors += [duplicateEnumValueRepr(name, valueName, r)];
+          }
+          valueReprs += [r];
+        }
+      }
     }
   }
 
