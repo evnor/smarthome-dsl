@@ -10,7 +10,7 @@ import smarthome::Parser;
 import smarthome::CST2AST;
 import smarthome::Checker;
 
-public str generatePythonFile(loc input, loc output) {
+public str generatePythonFile(loc input) {
   System sys = cst2ast(parseSmrt(input));
   list[CheckError] errors = check(sys);
   if (errors != []) {
@@ -19,7 +19,6 @@ public str generatePythonFile(loc input, loc output) {
   }
   // println(prettyNode(sys));
   str code = generatePython(sys);
-  writeFile(output, code);
   return code;
 }
 

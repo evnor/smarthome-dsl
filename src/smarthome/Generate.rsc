@@ -15,7 +15,8 @@ public int main(list[str] args) {
   loc input = fileLoc(args[0]);
   loc output = fileLoc(args[1]);
 
-  generatePythonFile(input, output);
+  str code = generatePythonFile(input);
+  writeFile(output, code);
   println("Generated <output>");
   return 0;
 }
