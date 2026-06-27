@@ -14,7 +14,8 @@ public str generatePythonFile(loc input, loc output) {
   System sys = cst2ast(parseSmrt(input));
   list[CheckError] errors = check(sys);
   if (errors != []) {
-    throw "Cannot generate Python for invalid Smarthome DSL program: <errors>";
+    println(joinLines(["<e>" | e <- errors]));
+    throw "Cannot generate Python for invalid Smarthome DSL program";
   }
   // println(prettyNode(sys));
   str code = generatePython(sys);
@@ -608,6 +609,7 @@ str generateMarshallingExpr(str accessor, Type tp, int depth) {
       case integerT(): return "int(<accessor>)"; // These could be just "<accessor>", but this way we catch unexpected values
       case booleanT(): return "bool(<accessor>)";
       case stringT(): return "str(<accessor>)";
+      default: throw "Unimplemented";
   }
 }
 

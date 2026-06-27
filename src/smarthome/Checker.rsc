@@ -805,10 +805,10 @@ tuple[Type, list[CheckError]] inferNumericBinary(str op, Exp lhs, Exp rhs, VarTa
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(integerT(), left[0])) {
-    errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
+    errors += [invalidOperand(op, left[0], "<lhs> <op> <rhs>")];
   }
   if (!compatible(integerT(), right[0])) {
-    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
+    errors += [invalidOperand(op, right[0], "<lhs> <op> <rhs>")];
   }
   return <integerT(), errors>;
 }
@@ -826,12 +826,12 @@ tuple[Type, list[CheckError]] inferIsIn(str op, Exp lhs, Exp rhs, VarTable env, 
   switch (right[0]) {
     case mapT(keyType, _): {
       if (!compatible(left[0], keyType)) {
-        errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
+        errors += [invalidOperand(op, left[0], "<lhs> <op> <rhs>")];
       }
     }
     case listT(arrType): {
       if (!compatible(left[0], arrType)) {
-        errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
+        errors += [invalidOperand(op, right[0], "<lhs> <op> <rhs>")];
       }
     }
   }
@@ -844,7 +844,7 @@ tuple[Type, list[CheckError]] inferEquality(str op, Exp lhs, Exp rhs, VarTable e
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(left[0], right[0])) {
-    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
+    errors += [invalidOperand(op, right[0], "<lhs> <op> <rhs>")];
   }
   return <booleanT(), errors>;
 }
@@ -854,10 +854,10 @@ tuple[Type, list[CheckError]] inferBooleanBinary(str op, Exp lhs, Exp rhs, VarTa
   tuple[Type, list[CheckError]] right = inferExp(rhs, env, types, states);
   list[CheckError] errors = left[1] + right[1];
   if (!compatible(booleanT(), left[0])) {
-    errors += [invalidOperand(op, left[0], "<left> <op> <right>")];
+    errors += [invalidOperand(op, left[0], "<lhs> <op> <rhs>")];
   }
   if (!compatible(booleanT(), right[0])) {
-    errors += [invalidOperand(op, right[0], "<left> <op> <right>")];
+    errors += [invalidOperand(op, right[0], "<lhs> <op> <rhs>")];
   }
   return <booleanT(), errors>;
 }
