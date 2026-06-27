@@ -1,3 +1,5 @@
+# This script is where we imagined what the generated output of parking_controller.smrt should look like
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
