@@ -592,10 +592,10 @@ list[str] generateDataMarshallExpr(Type tp, str portName) {
     case inferredT(): {
       throw "This should be unreachable. Port <portName> has type inferredT";
     }
-    case namedT(name): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
-    case \mapT(keyType, valueType): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
-    case \listT(arrType): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
-    case \tupleT(tupleTypes): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case namedT(_): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \mapT(_, _): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \listT(_): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
+    case \tupleT(_): return ["data = <generateMarshallingExpr("data", tp, 0)>"];
     default: return [];
   }
 }

@@ -27,6 +27,9 @@ data CheckError
   | invalidReturn(Type expected, Type actual)
   | invalidSend(str reason)
   | wrongArity(str name, int expectedArity, int actualArity)
+  | missingReturn(str name)
+  | continueOutsideLoop()
+  | breakOutsideLoop()
   ;
 
 data CheckedConnection
@@ -297,7 +300,7 @@ list[CheckError] checkFSM(str componentName, list[Port] ports, FSM fsm, TypeTabl
         }
       }
 
-      errors += checkStateConstructor(componentName, initialState, stateTable, types, ());
+      errors += checkStateConstructor(initialState, stateTable, types, ());
 
       for (transition(state(sourceName, _), state(targetName, _), event, condition, action) <- transitions) {
         if (sourceName notin stateTable) {
@@ -402,7 +405,7 @@ list[CheckError] checkFunc(Func function, Type expectedReturn, FuncType funcType
       }
       errors += checkType(returnType, types, states);
 
-      tuple[VarTable, list[CheckError], list[Type]] result = checkStatements(body, env, returnType, portTypes, types, states);
+      tuple[VarTable, list[CheckError], list[Type], bool] result = checkStatements(body, env, returnType, portTypes, types, states, false);
       errors += result[1];
 
       for (actual <- result[2]) {
@@ -410,9 +413,11 @@ list[CheckError] checkFunc(Func function, Type expectedReturn, FuncType funcType
           errors += [invalidReturn(returnType, actual)];
         }
       }
-
       if (!compatible(expectedReturn, returnType)) {
         errors += [invalidReturn(expectedReturn, returnType)];
+      }
+      if (!result[3]) {
+        errors += [missingReturn("Function may not always return")];
       }
 
       return errors;
@@ -422,25 +427,27 @@ list[CheckError] checkFunc(Func function, Type expectedReturn, FuncType funcType
   return [];
 }
 
-tuple[VarTable, list[CheckError], list[Type]] checkStatements(list[Statement] statements, VarTable env, Type returnType, VarTable portTypes, TypeTable types, StateTable states) {
+tuple[VarTable, list[CheckError], list[Type], bool] checkStatements(list[Statement] statements, VarTable env, Type returnType, VarTable portTypes, TypeTable types, StateTable states, bool isInLoop) {
   list[CheckError] errors = [];
   list[Type] returns = [];
   VarTable current = env;
+  bool always_returns = false;
 
   for (statement <- statements) {
-    tuple[VarTable, list[CheckError], list[Type]] checked = checkStatement(statement, current, returnType, portTypes, types, states);
+    tuple[VarTable, list[CheckError], list[Type], bool] checked = checkStatement(statement, current, returnType, portTypes, types, states, isInLoop);
     current = checked[0];
     errors += checked[1];
     returns += checked[2];
+    always_returns = always_returns || checked[3];
   }
 
-  return <current, errors, returns>;
+  return <current, errors, returns, always_returns>;
 }
 
-tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement, VarTable env, Type returnType, VarTable portTypes, TypeTable types, StateTable states) {
+tuple[VarTable, list[CheckError], list[Type], bool] checkStatement(Statement statement, VarTable env, Type returnType, VarTable portTypes, TypeTable types, StateTable states, bool isInLoop) {
   switch (statement) {
     case declStat(name, tp): {
-      return <env + (name: tp), checkType(tp, types), []>;
+      return <env + (name: tp), checkType(tp, types), [], false>;
     }
 
     case declAssignStat(name, tp, rval): {
@@ -453,7 +460,7 @@ tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement
       if (!compatible(declared, inferred[0])) {
         errors += [typeMismatch(declared, inferred[0], "<name>")];
       }
-      return <env + (name: declared), errors, []>;
+      return <env + (name: declared), errors, [], false>;
     }
 
     case assignStat(lval, rval): {
@@ -463,7 +470,7 @@ tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement
       if (!compatible(lhs[0], rhs[0])) {
         errors += [typeMismatch(lhs[0], rhs[0], "<lval>")];
       }
-      return <env, errors, []>;
+      return <env, errors, [], false>;
     }
 
     case ifElseStat(cond, ifpart, elsepart): {
@@ -473,37 +480,45 @@ tuple[VarTable, list[CheckError], list[Type]] checkStatement(Statement statement
         errors += [invalidCondition(condition[0])];
       }
 
-      tuple[VarTable, list[CheckError], list[Type]] ifChecked = checkStatements(ifpart, env, returnType, portTypes, types, states);
-      tuple[VarTable, list[CheckError], list[Type]] elseChecked = checkStatements(elsepart, env, returnType, portTypes, types, states);
-      return <env, errors + ifChecked[1] + elseChecked[1], ifChecked[2] + elseChecked[2]>;
+      tuple[VarTable, list[CheckError], list[Type], bool] ifChecked = checkStatements(ifpart, env, returnType, portTypes, types, states, isInLoop);
+      tuple[VarTable, list[CheckError], list[Type], bool] elseChecked = checkStatements(elsepart, env, returnType, portTypes, types, states, isInLoop);
+      return <env, errors + ifChecked[1] + elseChecked[1], ifChecked[2] + elseChecked[2], ifChecked[3] && elseChecked[3]>;
     }
 
     case whileStat(cond, body): {
       tuple[Type, list[CheckError]] condition = inferExp(cond, env, types, states);
-      tuple[VarTable, list[CheckError], list[Type]] checkedBody = checkStatements(body, env, returnType, portTypes, types, states);
+      tuple[VarTable, list[CheckError], list[Type], bool] checkedBody = checkStatements(body, env, returnType, portTypes, types, states, true);
       list[CheckError] errors = condition[1] + checkedBody[1];
       if (!compatible(booleanT(), condition[0])) {
         errors += [invalidCondition(condition[0])];
       }
-      return <env, errors, checkedBody[2]>;
+      return <env, errors, checkedBody[2], false>; // Changing this would require complicated control flow analysis
     }
 
-    case \continue():
-      return <env, [], []>;
+    case \continue(): {
+      if (isInLoop) {
+        return <env, [], [], false>;
+      } else {
+        return <env, [continueOutsideLoop()], [], false>;
+      }
+    }
 
     case \break():
-      return <env, [], []>;
+      if (isInLoop) {
+        return <env, [], [], false>;
+      } else {
+        return <env, [breakOutsideLoop()], [], false>;
+      }
 
     case \return(exp): {
       tuple[Type, list[CheckError]] inferred = inferExp(exp, env, types, states);
-      return <env, inferred[1], [inferred[0]]>;
+      return <env, inferred[1], [inferred[0]], true>;
     }
 
     case send(params):
-      return <env, checkSend(params, env, portTypes, types, states), []>;
+      return <env, checkSend(params, env, portTypes, types, states), [], false>;
+    default: throw "Unreachable";
   }
-
-  return <env, [], []>;
 }
 
 list[CheckError] checkSend(list[Exp] params, VarTable env, VarTable portTypes, TypeTable types, StateTable states) {
@@ -529,7 +544,7 @@ list[CheckError] checkSend(list[Exp] params, VarTable env, VarTable portTypes, T
   }
 }
 
-list[CheckError] checkStateConstructor(str componentName, Exp exp, StateTable states, TypeTable types, VarTable env) {
+list[CheckError] checkStateConstructor(Exp exp, StateTable states, TypeTable types, VarTable env) {
   tuple[Type, list[CheckError]] inferred = inferExp(exp, env, types, states);
   return inferred[1];
 }
