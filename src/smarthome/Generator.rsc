@@ -10,16 +10,15 @@ import smarthome::Parser;
 import smarthome::CST2AST;
 import smarthome::Checker;
 
-public str generatePythonFile(loc input) {
+public tuple[bool, str] generatePythonFile(loc input) {
   System sys = cst2ast(parseSmrt(input));
   list[CheckError] errors = check(sys);
   if (errors != []) {
-    println(joinLines(["    <e>" | e <- errors]));
-    throw "Cannot generate Python for invalid Smarthome DSL program";
+    return <false, joinLines(["    <e>" | e <- errors])>;
   }
   // println(prettyNode(sys));
   str code = generatePython(sys);
-  return code;
+  return <true, code>;
 }
 
 public str generatePython(System sys) {
