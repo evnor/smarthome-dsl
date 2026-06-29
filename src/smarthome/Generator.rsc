@@ -14,7 +14,7 @@ public str generatePythonFile(loc input) {
   System sys = cst2ast(parseSmrt(input));
   list[CheckError] errors = check(sys);
   if (errors != []) {
-    println(joinLines(["<e>" | e <- errors]));
+    println(joinLines(["    <e>" | e <- errors]));
     throw "Cannot generate Python for invalid Smarthome DSL program";
   }
   // println(prettyNode(sys));

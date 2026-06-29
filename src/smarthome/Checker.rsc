@@ -2,6 +2,7 @@ module smarthome::Checker
 
 import List;
 import IO;
+import Node;
 
 import smarthome::AST;
 
@@ -914,7 +915,7 @@ bool compatible(Type expected, Type actual) {
       return true;
     }
     default:
-      return expected == actual;
+      return unset(expected, "src") == unset(actual, "src");
   }
 }
 

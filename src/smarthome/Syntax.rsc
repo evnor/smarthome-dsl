@@ -35,8 +35,8 @@ keyword Reserved
 | "tuple"
 | "continue"
 | "break"
-| "min"
-| "max"
+// | "min"
+// | "max"
 ;
 
 start syntax System
