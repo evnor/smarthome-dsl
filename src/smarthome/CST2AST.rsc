@@ -245,7 +245,7 @@ Primitive cst2ast(tree:(Primitive) `{ <{MapKeyValuePair ","}* pairs> }`) {
   return \map((k: v | <k, v> <- [cst2ast(p) | p <- pairs]))[src=tree.src];
 }
 
-Primitive cst2ast(tree:(Primitive) `[ <Primitive* values> ]`) {
+Primitive cst2ast(tree:(Primitive) `[ <{Primitive ","}* values> ]`) {
   return smarthome::AST::\list([cst2ast(v) | v <- values])[src=tree.src];
 }
 

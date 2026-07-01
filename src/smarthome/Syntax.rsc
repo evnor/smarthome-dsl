@@ -120,7 +120,7 @@ syntax Primitive
 | boolean: "true"
 | boolean: "false"
 | \map: "{" {MapKeyValuePair ","}* "}"
-| \list: "[" Primitive* "]"
+| \list: "[" {Primitive ","}* "]"
 | \tuple: "(" {Primitive ","}* ")"
 ;
 
