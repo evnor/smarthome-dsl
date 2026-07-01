@@ -83,8 +83,10 @@ list[str] generateEnum(EnumDef enumDefinition) {
     }
   }
 
+  list[int] valueValues = [v | enumValueDef(_, some(primCon(integer(v)))) <- values];
+
   list[str] lines = ["class <name>(IntEnum):"];
-  int nextValue = 0;
+  int storedValue = 0;
 
   if (values == []) {
     lines += ["    pass"];
@@ -97,11 +99,12 @@ list[str] generateEnum(EnumDef enumDefinition) {
         switch (enumValueOption) {
           case some(primCon(integer(i))): {
             lines += ["    <valueName> = <i>"];
-            nextValue = i + 1;
+            storedValue = i + 1;
           }
           default: {
-            lines += ["    <valueName> = <nextValue>"];
-            nextValue += 1;
+            storedValue = nextValidEnumValue(valueValues, storedValue);
+            lines += ["    <valueName> = <storedValue>"];
+            storedValue += 1;
           }
         }
       }
@@ -110,6 +113,14 @@ list[str] generateEnum(EnumDef enumDefinition) {
 
   return lines;
 }
+
+int nextValidEnumValue(list[int] values, int prev) {
+  while (prev in values) {
+    prev += 1;
+  }
+  return prev;
+}
+
 
 list[str] generatePorts(Component componentDef, list[Connection] connections) {
   str componentId = "";
